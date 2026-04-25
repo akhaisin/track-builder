@@ -1,0 +1,11 @@
+.app-shell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100svh;
+}
+
+.under-construction {
+  max-width: min(480px, 90vw);
+  height: auto;
+}
