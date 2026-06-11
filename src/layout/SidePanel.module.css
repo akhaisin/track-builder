@@ -1,0 +1,86 @@
+/* ── Panel container ─────────────────────────────────────── */
+.panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.panel--left  { border-right: 1px solid var(--tb-color-border); }
+.panel--right { border-left:  1px solid var(--tb-color-border); }
+
+/* ── Title bar (expanded) ────────────────────────────────── */
+.titleBar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  height: 32px;
+  flex-shrink: 0;
+  gap: 2px;
+  background: var(--tb-color-surface-mid);
+  border-bottom: 1px solid var(--tb-color-border);
+  cursor: pointer;
+  user-select: none;
+}
+
+/* ── Collapsed vertical bar ──────────────────────────────── */
+.collapsedBar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  background: var(--tb-color-surface-mid);
+  cursor: pointer;
+}
+
+/* ── Caption labels ──────────────────────────────────────── */
+.captionText {
+  font-size: var(--tb-font-size-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--tb-color-text-muted);
+  user-select: none;
+}
+
+.captionVertical {
+  font-size: var(--tb-font-size-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--tb-color-text-muted);
+  user-select: none;
+  writing-mode: vertical-rl;
+  margin-top: 10px;
+}
+
+/* left panel: reads upward (bottom-to-top) */
+.captionVertical--left  { transform: rotate(180deg); }
+/* right panel: reads downward (top-to-bottom) — default vertical-rl direction */
+.captionVertical--right { transform: none; }
+
+/* ── Toggle button ───────────────────────────────────────── */
+.toggleBtn {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  color: var(--tb-color-text-muted);
+  border-radius: var(--tb-radius-sm);
+}
+.toggleBtn:hover {
+  color: var(--tb-color-text);
+  background: var(--tb-color-hover-bg);
+}
+
+/* ── Content body ────────────────────────────────────────── */
+.body {
+  flex: 1;
+  overflow: auto;
+  background: var(--tb-color-surface);
+}

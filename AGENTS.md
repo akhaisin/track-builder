@@ -1,47 +1,87 @@
-# Track Builder — Agent Changelog
+# track-builder
 
-## M1 — Project Bootstrap
+Visual web editor for designing compact indoor FPV drone racing tracks built from PVC pipes and connectors. Tracks are arranged on a 3D lattice grid. Users browse catalog tracks, create and manage local tracks, edit gate placements and racing paths, and visualize the result.
 
-**Goal:** Initialize the project skeleton with branding, mefly-nav integration, and an under-construction placeholder page.
+## Tech Stack
 
-### What was done
+| Layer | Technology |
+|---|---|
+| Framework | React 19 + TypeScript + Vite |
+| Package manager | pnpm |
+| State management | Zustand |
+| 3D rendering | Three.js |
+| Layout panels | react-resizable-panels |
+| Routing | React Router (HashRouter) |
+| Testing | Vitest + jsdom + @testing-library |
 
-- Scaffolded React + TypeScript + Vite project using `pnpm create vite@latest` with the `react-ts` template.
-- Renamed project to `track-builder` in `package.json`.
-- Placed `under-construction.svg` in `src/assets/`.
-- Replaced the default Vite welcome page (`App.tsx` / `App.css`) with a centered display of `under-construction.svg`.
-- Added `public/favicon.svg` — quadcopter drone icon (64×64, SVG).
-- Updated `index.html` title to `Track Builder`.
-- Added dependencies:
-  - `mefly-nav` (`github:akhaisin/mefly-nav#v0.1.3`) — nav receiver widget
-  - `react-router-dom` ^7 — required peer dependency for mefly-nav
-- Integrated `mefly-nav` the same way as in `learning-react`:
-  - `useHostSync(['https://mefly.dev', 'https://www.mefly.dev'])` called at app shell level
-  - `<MeflyNavReceiver>` rendered with hover activation mode and standard styling tokens
-  - `HashRouter` wraps the app (required for `useHostSync` / nav sync)
-  - `mefly-nav/style.css` imported in `App.tsx`
-- Added GitHub Actions workflow (`.github/workflows/deploy-pages.yml`) to deploy to GitHub Pages on push to `main`.
-- Set `base: '/track-builder/'` in `vite.config.ts` so asset paths resolve correctly under the Pages sub-path.
+## Commands
 
-### File layout after M1
+```bash
+pnpm dev          # dev server → http://localhost:5173
+pnpm build        # type-check + production build
+pnpm lint         # run ESLint
+pnpm test:run     # run tests once
+pnpm test         # run tests in watch mode
+```
+
+## Validation
+
+After any changes, all three must pass before a task is complete:
+
+```bash
+pnpm build
+pnpm lint
+pnpm test:run
+```
+
+## Architecture
+
+Hash-based SPA routing (`/#/tracks/{id}?mode=...`). Three-panel resizable layout: catalog (left, collapsible) / workspace (center) / debug (right, dev-only).
+
+Two Zustand stores: `tracks.store.ts` (unified track CRUD + localStorage sync) and `metadata.store.ts` (per-track readonly flag, remote load status, errors). Remote tracks are served as static JSON files and fetched lazily on selection.
+
+Workspace modes — `view`, `gates`, `path`, `json` — are controlled via the `?mode=` URL query parameter. The center panel hosts `TrackEditor`, which owns a toolbar (`TrackEditorToolbar`) and a scene panel (`TrackEditorScene`). The toolbar dispatches mode-specific events to the scene. `TrackEditorScene` holds a ref to the current track entry in the tracks store and renders the appropriate mode view.
+
+Remote catalog tracks are organized into subdirectories (e.g. `public/tracks/RG5/rg5-06.json`). Track IDs are their path relative to `public/tracks/` without the `.json` extension (e.g. `RG5/rg5-06`). The catalog panel renders remote tracks as a tree mirroring this directory hierarchy.
 
 ```
-track-builder/
-├── .github/
-│   └── workflows/
-│       └── deploy-pages.yml  # builds + deploys to GitHub Pages
-├── public/
-│   └── favicon.svg           # drone icon
-├── src/
-│   ├── assets/
-│   │   └── under-construction.svg
-│   ├── App.tsx               # app shell with mefly-nav + under-construction page
-│   ├── App.css               # minimal shell styles
-│   ├── index.css             # base styles (from Vite template)
-│   └── main.tsx              # React root
-├── index.html
-├── package.json
-├── vite.config.ts
-├── tsconfig.json
-└── tsconfig.app.json
+src/
+├── App.tsx
+├── main.tsx
+├── index.css                        # Global reset + --tb-* design tokens
+├── pages/
+│   └── TracksBuilderPage.tsx
+├── store/
+│   ├── tracks.store.ts
+│   ├── useTracksStore.ts
+│   ├── metadata.store.ts
+│   └── useMetadataStore.ts
+├── features/
+│   ├── catalog/TracksCatalog.tsx
+│   ├── trackEditor/
+│   │   ├── TrackEditor.tsx          # Center panel host; owns toolbar→scene event flow
+│   │   ├── TrackEditorToolbar.tsx   # Mode switcher + mode-specific actions
+│   │   └── TrackEditorScene.tsx     # Renders active mode; holds ref to current track
+│   └── debugTools/DebugTools.tsx
+├── layout/
+│   ├── Layout.tsx
+│   ├── SidePanel.tsx
+│   └── layout.store.ts
+├── hooks/
+│   └── useParentWindowSync.ts
+└── types/
+    ├── tracks.ts
+    └── metadata.ts
 ```
+
+## Key Conventions
+
+- **Package manager**: always `pnpm`
+- **Routing**: hash-based `/#/tracks/{id}?mode=...`
+
+## Memory Banks
+
+Project knowledge is indexed at [`.claude/memory/MEMORY.md`](.claude/memory/MEMORY.md).
+Load the index and relevant files before working on any feature.
+
+@.claude/memory/MEMORY.md
