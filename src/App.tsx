@@ -1,22 +1,23 @@
 import React from 'react';
-import { HashRouter } from 'react-router-dom';
-import { useHostSync, MeflyNavReceiver } from 'mefly-nav';
-import 'mefly-nav/style.css';
-import underConstruction from './assets/under-construction.svg';
+import { HashRouter, Route, Routes } from 'react-router-dom';
+// TODO(mefly-nav): using local stub until the upstream package ships dist.
+import { useHostSync, MeflyNavReceiver } from './stubs/mefly-nav';
+import TracksBuilderPage from './pages/TracksBuilderPage';
+import useParentWindowSync from './hooks/useParentWindowSync';
 import './App.css';
 
 const TRUSTED_ORIGINS = ['https://mefly.dev', 'https://www.mefly.dev'];
 
 function AppShell() {
   useHostSync(TRUSTED_ORIGINS);
+  useParentWindowSync(TRUSTED_ORIGINS);
 
   return (
     <div className="app-shell">
-      <img
-        src={underConstruction}
-        alt="Under construction"
-        className="under-construction"
-      />
+      <Routes>
+        <Route path="/" element={<TracksBuilderPage />} />
+        <Route path="/tracks/*" element={<TracksBuilderPage />} />
+      </Routes>
 
       <MeflyNavReceiver
         trustedOrigins={TRUSTED_ORIGINS}

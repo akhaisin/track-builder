@@ -1,0 +1,22 @@
+.group {
+  width: 100%;
+  height: 100%;
+}
+
+.separator {
+  flex: 0 0 4px;
+  background: var(--tb-color-border);
+  transition: background var(--tb-transition);
+}
+
+.separator:hover,
+.separator[data-resizing] {
+  background: var(--tb-color-border-focus);
+}
+
+.center {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--tb-color-bg);
+}

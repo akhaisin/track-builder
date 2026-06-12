@@ -1,11 +1,7 @@
 .app-shell {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 100svh;
-}
-
-.under-construction {
-  max-width: min(480px, 90vw);
-  height: auto;
+  height: 100svh;
+  overflow: hidden;
+  background: var(--tb-color-bg);
+  color: var(--tb-color-text);
+  font-family: var(--tb-font-sans);
 }

@@ -1,0 +1,115 @@
+.catalog {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tb-space-md);
+  padding: var(--tb-space-sm);
+  height: 100%;
+  overflow-y: auto;
+  font-size: var(--tb-font-size-sm);
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--tb-space-xs);
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: var(--tb-font-size-md);
+  color: var(--tb-color-text-heading);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--tb-space-xs);
+}
+
+.entry {
+  display: flex;
+  align-items: center;
+  gap: var(--tb-space-xs);
+  padding: var(--tb-space-xs) var(--tb-space-sm);
+  border-radius: var(--tb-radius-sm);
+  cursor: pointer;
+  transition: background var(--tb-transition);
+}
+
+.entry:hover {
+  background: var(--tb-color-hover-bg);
+}
+
+.entrySelected {
+  background: var(--tb-color-accent-bg);
+}
+
+.entryName {
+  color: var(--tb-color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.entryId {
+  margin-left: auto;
+  color: var(--tb-color-text-muted);
+  font-family: var(--tb-font-mono);
+  font-size: var(--tb-font-size-xs);
+}
+
+.entryActions {
+  display: flex;
+  gap: var(--tb-space-xs);
+}
+
+.iconBtn {
+  width: 1.6rem;
+  height: 1.6rem;
+  line-height: 1;
+  border: 1px solid var(--tb-color-border);
+  border-radius: var(--tb-radius-sm);
+  background: var(--tb-color-surface);
+  color: var(--tb-color-text-sub);
+  cursor: pointer;
+  transition: background var(--tb-transition), border-color var(--tb-transition);
+}
+
+.iconBtn:hover:not(:disabled) {
+  background: var(--tb-color-hover-bg);
+  border-color: var(--tb-color-border-focus);
+}
+
+.iconBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.iconBtnDanger {
+  color: var(--tb-color-danger);
+}
+
+.groupName {
+  padding: var(--tb-space-xs) 0;
+  font-weight: 600;
+  color: var(--tb-color-text-sub);
+  cursor: pointer;
+}
+
+.group .list {
+  margin-left: var(--tb-space-sm);
+}
+
+.hint {
+  margin: var(--tb-space-xs) 0;
+  color: var(--tb-color-text-muted);
+}
+
+.error {
+  margin: var(--tb-space-xs) 0;
+  color: var(--tb-color-danger);
+}

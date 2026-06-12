@@ -1,0 +1,36 @@
+.debugTools {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tb-space-sm);
+  padding: var(--tb-space-sm);
+  height: 100%;
+  overflow-y: auto;
+  font-size: var(--tb-font-size-sm);
+}
+
+.heading {
+  margin: 0;
+  font-size: var(--tb-font-size-md);
+  color: var(--tb-color-text-heading);
+}
+
+.selected {
+  margin: 0;
+  color: var(--tb-color-text-sub);
+}
+
+.selected code {
+  font-family: var(--tb-font-mono);
+  font-size: var(--tb-font-size-xs);
+  background: var(--tb-color-surface-mid);
+  padding: 0 var(--tb-space-xs);
+  border-radius: var(--tb-radius-sm);
+}
+
+.section {
+  border: 1px solid var(--tb-color-border);
+  border-radius: var(--tb-radius-sm);
+  background: var(--tb-color-surface);
+  padding: var(--tb-space-xs);
+  overflow-x: auto;
+}

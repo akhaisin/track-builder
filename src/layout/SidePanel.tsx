@@ -1,6 +1,6 @@
 import { Panel, usePanelRef } from 'react-resizable-panels';
-import type { PanelSize } from 'react-resizable-panels';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { layoutStore } from './layout.store';
 import styles from './SidePanel.module.css';
 
 export type PanelPosition = 'left' | 'right';
@@ -13,6 +13,8 @@ export interface Props {
   minSize?: string;
   collapsedSize?: number;
   defaultCollapsed?: boolean;
+  /** When set, the panel mirrors its collapse state into the layout store. */
+  panelId?: string;
 }
 
 const DEFAULT_COLLAPSED_SIZE = 32;
@@ -28,6 +30,7 @@ export default function SidePanel({
   minSize = '10%',
   collapsedSize = DEFAULT_COLLAPSED_SIZE,
   defaultCollapsed = false,
+  panelId,
 }: Props) {
   const panelRef = usePanelRef();
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
@@ -35,17 +38,22 @@ export default function SidePanel({
   // collapsed there is no recorded size, so the first expand targets defaultSize.
   const hasExpandedRef = useRef(!defaultCollapsed);
 
+  useEffect(() => {
+    if (panelId) layoutStore.getState().setCollapsed(panelId, collapsed);
+  }, [panelId, collapsed]);
+
   function toggle() {
     const panel = panelRef.current;
     if (!panel) return;
     if (panel.isCollapsed()) {
-      hasExpandedRef.current ? panel.expand() : panel.resize(defaultSize);
+      if (hasExpandedRef.current) panel.expand();
+      else panel.resize(defaultSize);
     } else {
       panel.collapse();
     }
   }
 
-  function handleResize(_size: PanelSize) {
+  function handleResize() {
     const isCollapsed = panelRef.current?.isCollapsed() ?? false;
     if (!isCollapsed) hasExpandedRef.current = true;
     setCollapsed(isCollapsed);
