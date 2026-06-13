@@ -206,6 +206,64 @@ export function addGateMesh(
   return fillMesh;
 }
 
+/**
+ * A small stylized quadcopter: a crossed X-frame, four translucent rotor
+ * disks, a body, and a nose marker. Built unlit (MeshBasicMaterial) like the
+ * rest of the scene. Its local −Z is the forward/heading axis (so a plain
+ * `Object3D.lookAt` aims it along travel) and rotor disks face local +Y (up).
+ * (VIZ_019)
+ */
+export function buildQuadcopter(): THREE.Group {
+  const quad = new THREE.Group();
+  const frameColor = new THREE.Color('#d8d2c4');
+  const motorR = 0.16; // motor distance from center, lattice units
+  const rotorRadius = 0.1;
+  const armDiag = 2 * motorR * Math.SQRT2; // a bar spans two opposite motors
+
+  // X-frame: two thin bars crossing at the center, each reaching two motors.
+  const frameMat = new THREE.MeshBasicMaterial({ color: frameColor });
+  for (const angle of [Math.PI / 4, -Math.PI / 4]) {
+    const bar = new THREE.Mesh(new THREE.BoxGeometry(armDiag, 0.025, 0.03), frameMat);
+    bar.rotation.y = angle;
+    quad.add(bar);
+  }
+
+  const body = new THREE.Mesh(
+    new THREE.BoxGeometry(0.1, 0.06, 0.14),
+    new THREE.MeshBasicMaterial({ color: frameColor }),
+  );
+  quad.add(body);
+
+  const rotorMat = new THREE.MeshBasicMaterial({
+    color: new THREE.Color(cssColor('--tb-color-warning', '#c87d2a')),
+    transparent: true,
+    opacity: 0.85,
+    side: THREE.DoubleSide,
+  });
+  for (const sx of [1, -1]) {
+    for (const sz of [1, -1]) {
+      const rotor = new THREE.Mesh(
+        new THREE.CylinderGeometry(rotorRadius, rotorRadius, 0.012, 16),
+        rotorMat,
+      );
+      rotor.position.set(sx * motorR, 0.03, sz * motorR);
+      quad.add(rotor);
+    }
+  }
+
+  // Nose marker at the front (local −Z) so heading reads at a glance.
+  const nose = new THREE.Mesh(
+    new THREE.ConeGeometry(0.04, 0.1, 12),
+    new THREE.MeshBasicMaterial({ color: new THREE.Color(cssColor('--tb-color-danger', '#b94040')) }),
+  );
+  nose.position.set(0, 0.02, -motorR);
+  nose.rotation.x = -Math.PI / 2; // cone tip toward −Z
+  quad.add(nose);
+
+  quad.scale.setScalar(0.3); // 30% of the modeled size
+  return quad;
+}
+
 /** Lattice ground grid with 1-unit cells, sized to the track bounds. (VIZ_001) */
 export function buildGrid(bounds: SceneBounds): THREE.GridHelper {
   const size = 2 * Math.ceil(bounds.radius + 2);

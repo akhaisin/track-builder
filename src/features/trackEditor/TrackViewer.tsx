@@ -9,6 +9,7 @@ import {
   disposeObject,
   PIPE_RADIUS,
 } from './three/sceneBuilders';
+import { createFlightAnimation } from './three/droneFlight';
 import { createSceneContext, isWebglAvailable } from './three/sceneSetup';
 import type { SceneContext } from './three/sceneSetup';
 import type { Track } from '../../types/tracks';
@@ -77,6 +78,16 @@ export default function TrackViewer({ track, trackId }: Props) {
 
     // Step numbers always on, matching path mode.
     for (const sprite of buildLabelSprites(track)) trackGroup.add(sprite);
+
+    // Quadcopter flying the racing path, trailing a fading line. (VIZ_019, VIZ_020)
+    const flight = createFlightAnimation(track);
+    if (!flight) return;
+    trackGroup.add(flight.object);
+    const unsubscribe = ctx.onFrame(flight.update);
+    return () => {
+      unsubscribe();
+      flight.dispose();
+    };
   }, [track, webglFailed]);
 
   if (webglFailed) {

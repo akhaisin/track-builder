@@ -98,6 +98,11 @@ metadata:
 - VIZ_004: Support interactive camera controls: orbit, zoom, and pan.
 - VIZ_005: The 3D canvas uses a dark background to contrast with track elements.
 
+### Flight Animation
+
+- VIZ_019: In view mode (Track Viewer), animate a quadcopter flying the racing path. The flight curve threads the *first* gate of each path step (one gate per step), in step order, as a closed Catmull-Rom curve looped continuously. To soften the otherwise-tight turns, the gate-center waypoints are corner-rounded by a tunable fillet radius (clamped per-edge to half its length), so the drone clips just inside each gate rather than passing dead-center. Requires at least two steps with a gate; otherwise no drone is shown. The quad is a small stylized model oriented along its direction of travel.
+- VIZ_020: Render the flight path as a thin line at a low resting opacity, overlaid with a trail that brightens behind the moving drone — maximum opacity at the drone, fading back to the resting opacity over the distance the drone covers in the trailing 4 seconds.
+
 ### Workspace Modes
 
 - VIZ_006: The center panel displays one of four modes selected via the `?mode=` URL query parameter: `view` (Track Viewer), `gates` (Gates Editor), `path` (Path Editor), `json` (JSON View).

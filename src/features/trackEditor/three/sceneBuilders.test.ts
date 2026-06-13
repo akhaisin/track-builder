@@ -4,6 +4,7 @@ import {
   buildGrid,
   buildPathObject,
   buildPipeMesh,
+  buildQuadcopter,
   computeBounds,
   cssColor,
   flattenSegments,
@@ -18,10 +19,10 @@ const ladder3 = ladder3Json as Track;
 describe('computeBounds', () => {
   it('spans all edge and path points', () => {
     const bounds = computeBounds(ladder3);
-    expect(bounds.min).toEqual([0, 0, 0]);
-    expect(bounds.max).toEqual([1, 3, 0]);
+    expect(bounds.min).toEqual([-1, 0, 0]);
+    expect(bounds.max).toEqual([2, 3, 0]);
     expect(bounds.center).toEqual([0.5, 1.5, 0]);
-    expect(bounds.radius).toBeCloseTo(Math.hypot(0.5, 1.5, 0));
+    expect(bounds.radius).toBeCloseTo(Math.hypot(1.5, 1.5, 0));
   });
 
   it('returns a safe default for an empty track', () => {
@@ -88,6 +89,18 @@ describe('geometry builders', () => {
     const material = grid.material as { transparent: boolean; opacity: number };
     expect(material.transparent).toBe(true);
     expect(material.opacity).toBeLessThan(1);
+  });
+});
+
+describe('buildQuadcopter', () => {
+  it('builds a group of unlit meshes with four rotor disks', () => {
+    const quad = buildQuadcopter();
+    expect(quad).toBeInstanceOf(THREE.Group);
+    const meshes = quad.children.filter((c): c is THREE.Mesh => c instanceof THREE.Mesh);
+    expect(meshes.length).toBe(quad.children.length);
+    // ConeGeometry (the nose) also extends CylinderGeometry, so match by type.
+    const rotors = meshes.filter((m) => m.geometry.type === 'CylinderGeometry');
+    expect(rotors).toHaveLength(4);
   });
 });
 

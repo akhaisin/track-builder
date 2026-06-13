@@ -10,6 +10,12 @@ export interface SceneContext {
   controls: OrbitControls;
   /** Mode views put their (re)buildable content here. */
   trackGroup: THREE.Group;
+  /**
+   * Register a callback invoked once per rendered frame with the absolute
+   * elapsed time (seconds) since the context was created. Returns a function
+   * that unregisters it.
+   */
+  onFrame: (cb: (elapsedSeconds: number) => void) => () => void;
   dispose: () => void;
 }
 
@@ -91,10 +97,14 @@ export function createSceneContext(
   const observer = new ResizeObserver(resize);
   observer.observe(container);
 
+  const frameCallbacks = new Set<(elapsedSeconds: number) => void>();
+  const clock = new THREE.Clock();
   let frame = 0;
   function animate() {
     frame = requestAnimationFrame(animate);
+    const elapsed = clock.getElapsedTime();
     controls.update();
+    for (const cb of frameCallbacks) cb(elapsed);
     renderer.render(scene, camera);
   }
   animate();
@@ -105,6 +115,10 @@ export function createSceneContext(
     camera,
     controls,
     trackGroup,
+    onFrame: (cb) => {
+      frameCallbacks.add(cb);
+      return () => frameCallbacks.delete(cb);
+    },
     dispose: () => {
       if (poseKey) {
         saveCameraPose(poseKey, {
@@ -113,6 +127,7 @@ export function createSceneContext(
         });
       }
       cancelAnimationFrame(frame);
+      frameCallbacks.clear();
       observer.disconnect();
       controls.dispose();
       disposeObject(scene);
