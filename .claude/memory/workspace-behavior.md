@@ -25,6 +25,7 @@ metadata:
 ## Iframe Sync
 
 - Route changes are synced with the parent window via `postMessage`.
-- Outbound: `HASH_CHANGED` on every route change.
-- Inbound: `NAVIGATE_TO_HASH` to navigate the embedded app.
-- Implemented in `hooks/useParentWindowSync.ts`.
+- Outbound: `HASH_CHANGED` (`{hash, pathname}`) on every route change.
+- Inbound: `NAVIGATE_TO_HASH` to navigate the embedded app (handles both pathname and hash-fragment values).
+- Provided by the `mefly-nav` package's `useHostSync(trustedOrigins)` hook, called in `App.tsx`. The former local `hooks/useParentWindowSync.ts` was removed in favor of this single source of truth.
+- `App.tsx` also renders `<MeflyNavReceiver>` (the dots menu) from `mefly-nav`; `mefly-nav` is pinned as a git-tag-subpath dependency that ships prebuilt `dist`.

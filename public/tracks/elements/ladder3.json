@@ -1,9 +1,9 @@
 {
-  "name": "track-001",
-  "description": "ladder 3",
+  "name": "ladder3",
+  "description": "ladder3",
   "caption": {
     "enabled": true,
-    "text_1": "ladder 3",
+    "text_1": "ladder3",
     "text_2": null,
     "location": [
       [
@@ -139,66 +139,6 @@
         3,
         0
       ]
-    ],
-    [
-      [
-        1,
-        0,
-        0
-      ],
-      [
-        1,
-        0,
-        1
-      ]
-    ],
-    [
-      [
-        1,
-        0,
-        1
-      ],
-      [
-        1,
-        0,
-        2
-      ]
-    ],
-    [
-      [
-        1,
-        0,
-        2
-      ],
-      [
-        1,
-        0,
-        3
-      ]
-    ],
-    [
-      [
-        1,
-        0,
-        3
-      ],
-      [
-        2,
-        0,
-        3
-      ]
-    ],
-    [
-      [
-        1,
-        0,
-        3
-      ],
-      [
-        1,
-        0,
-        4
-      ]
     ]
   ],
   "path": [
@@ -217,7 +157,8 @@
           ]
         ]
       ],
-      "entry": "forward"
+      "entry": "forward",
+      "aux": true
     },
     {
       "gates": [
@@ -251,7 +192,8 @@
           ]
         ]
       ],
-      "entry": "right"
+      "entry": "right",
+      "aux": true
     },
     {
       "gates": [
@@ -280,7 +222,8 @@
           ]
         ]
       ],
-      "entry": "backward"
+      "entry": "backward",
+      "aux": true
     },
     {
       "gates": [
@@ -326,7 +269,8 @@
           ]
         ]
       ],
-      "entry": "backward"
+      "entry": "backward",
+      "aux": true
     },
     {
       "gates": [
@@ -343,7 +287,8 @@
           ]
         ]
       ],
-      "entry": "right"
+      "entry": "right",
+      "aux": true
     },
     {
       "gates": [
@@ -377,7 +322,8 @@
           ]
         ]
       ],
-      "entry": "right"
+      "entry": "right",
+      "aux": true
     },
     {
       "gates": [
@@ -394,7 +340,8 @@
           ]
         ]
       ],
-      "entry": "backward"
+      "entry": "backward",
+      "aux": true
     },
     {
       "gates": [
@@ -411,7 +358,8 @@
           ]
         ]
       ],
-      "entry": "backward"
+      "entry": "backward",
+      "aux": true
     },
     {
       "gates": [
@@ -428,7 +376,8 @@
           ]
         ]
       ],
-      "entry": "left"
+      "entry": "left",
+      "aux": true
     }
   ]
 }

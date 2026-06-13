@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "json-edit-react": "^1.29.0",
-    "mefly-nav": "github:akhaisin/mefly.dev#55360330864483c78539bc72cd8777d0b6a6d81a&path:packages/mefly-nav",
+    "mefly-nav": "github:akhaisin/mefly.dev#mefly-nav-0.1.5&path:/packages/mefly-nav",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "react-resizable-panels": "^4.10.0",

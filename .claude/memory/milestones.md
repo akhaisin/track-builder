@@ -231,6 +231,6 @@ metadata:
 - Tests: `flightPath.test.ts` (waypoints), `droneFlight.test.ts` (trail fade ordering, <2-gate null, alpha-at-head, dispose), `buildQuadcopter` rotor count (128 total).
 
 ### Misc follow-ups (2026-06-12)
-- Camera orientation persists across workspace-mode switches — `createSceneContext` takes an optional `poseKey` (the track id), saves the camera position/target to a session-only module map on dispose, and restores it instead of reframing on the next mount with the same key. All three 3D modes (view/gates/path) pass it.
+
 1. **mefly-nav stub** (`src/stubs/mefly-nav.tsx`): fix upstream in `~/projects/mefly.dev` (add `prepare` script), repin, delete the stub.
 2. **WS_015–WS_020 (CornerButtons)** are in requirements but were never assigned to any milestone — not implemented.
