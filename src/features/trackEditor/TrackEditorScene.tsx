@@ -5,19 +5,15 @@ import { useTrackMetadata } from '../../store/useMetadataStore';
 import { useWorkspaceMode } from './workspaceMode';
 import type { Track } from '../../types/tracks';
 import type { WorkspaceMode } from './workspaceMode';
-import type { ToolbarEventBus } from './toolbarEventBus';
 import styles from './TrackEditor.module.css';
 
 export interface Props {
   trackId?: string;
-  /** Toolbar event channel; mode views subscribe to it. (WS_013) */
-  events: ToolbarEventBus;
 }
 
 interface ModeViewProps {
   trackId: string;
   track: Track;
-  events: ToolbarEventBus;
 }
 
 /** Read-only JSON object tree of the selected track. (VIZ_009) */
@@ -39,17 +35,17 @@ const loading3d = <div className={styles.scenePlaceholder}>Loading 3D view…</d
 const MODE_VIEWS: Record<WorkspaceMode, (props: ModeViewProps) => React.ReactNode> = {
   view: ({ track, trackId }) => (
     <Suspense fallback={loading3d}>
-      <TrackViewer key={trackId} track={track} />
+      <TrackViewer key={trackId} track={track} trackId={trackId} />
     </Suspense>
   ),
-  gates: ({ track, trackId, events }) => (
+  gates: ({ track, trackId }) => (
     <Suspense fallback={loading3d}>
-      <GatesEditor key={trackId} trackId={trackId} track={track} events={events} />
+      <GatesEditor key={trackId} trackId={trackId} track={track} />
     </Suspense>
   ),
-  path: ({ track, trackId, events }) => (
+  path: ({ track, trackId }) => (
     <Suspense fallback={loading3d}>
-      <PathEditor key={trackId} trackId={trackId} track={track} events={events} />
+      <PathEditor key={trackId} trackId={trackId} track={track} />
     </Suspense>
   ),
   json: (props) => <JsonModeView {...props} />,
@@ -59,7 +55,7 @@ const MODE_VIEWS: Record<WorkspaceMode, (props: ModeViewProps) => React.ReactNod
  * Renders the active workspace mode. Holds a live reference to the current
  * track entry in the tracks store and re-renders when it changes. (WS_014)
  */
-export default function TrackEditorScene({ trackId, events }: Props) {
+export default function TrackEditorScene({ trackId }: Props) {
   const [mode] = useWorkspaceMode();
   const track = useTrack(trackId);
   const metadata = useTrackMetadata(trackId);
@@ -84,5 +80,5 @@ export default function TrackEditorScene({ trackId, events }: Props) {
     return <div className={styles.scenePlaceholder}>Loading track…</div>;
   }
 
-  return <div className={styles.scene}>{MODE_VIEWS[mode]({ trackId, track, events })}</div>;
+  return <div className={styles.scene}>{MODE_VIEWS[mode]({ trackId, track })}</div>;
 }

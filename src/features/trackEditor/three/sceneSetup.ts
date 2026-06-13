@@ -18,28 +18,62 @@ export function isWebglAvailable(): boolean {
   return Boolean(canvas.getContext('webgl2') ?? canvas.getContext('webgl'));
 }
 
+export interface CameraPose {
+  position: [number, number, number];
+  target: [number, number, number];
+}
+
+// Session-only camera poses per track, so switching workspace modes (each
+// mode owns its own scene context) keeps the track oriented the same way.
+const cameraPoses = new Map<string, CameraPose>();
+
+export function saveCameraPose(key: string, pose: CameraPose): void {
+  cameraPoses.set(key, pose);
+}
+
+export function getCameraPose(key: string): CameraPose | undefined {
+  return cameraPoses.get(key);
+}
+
+export function clearCameraPoses(): void {
+  cameraPoses.clear();
+}
+
 /**
  * Shared 3D scene shell: dark background (VIZ_005), camera framed on the
  * track, orbit/zoom/pan controls (VIZ_004), resize handling, render loop.
+ *
+ * When `poseKey` is given, the camera pose is saved on dispose and restored
+ * on the next context created with the same key (instead of reframing).
  */
-export function createSceneContext(container: HTMLElement, framingTrack: Track): SceneContext {
+export function createSceneContext(
+  container: HTMLElement,
+  framingTrack: Track,
+  poseKey?: string,
+): SceneContext {
   const renderer = new THREE.WebGLRenderer({ antialias: true });
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(cssColor('--tb-color-canvas-bg', '#1e1a14'));
 
   const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 1000);
-  const bounds = computeBounds(framingTrack);
-  const distance = Math.max(bounds.radius * 2.2, 6);
-  camera.position.set(
-    bounds.center[0] + distance,
-    bounds.center[1] + distance * 0.8,
-    bounds.center[2] + distance,
-  );
-
   const controls = new OrbitControls(camera, renderer.domElement);
-  controls.target.set(...bounds.center);
   controls.enableDamping = true;
+
+  const savedPose = poseKey ? getCameraPose(poseKey) : undefined;
+  if (savedPose) {
+    camera.position.set(...savedPose.position);
+    controls.target.set(...savedPose.target);
+  } else {
+    const bounds = computeBounds(framingTrack);
+    const distance = Math.max(bounds.radius * 2.2, 6);
+    camera.position.set(
+      bounds.center[0] + distance,
+      bounds.center[1] + distance * 0.8,
+      bounds.center[2] + distance,
+    );
+    controls.target.set(...bounds.center);
+  }
 
   renderer.setPixelRatio(window.devicePixelRatio);
   container.appendChild(renderer.domElement);
@@ -72,6 +106,12 @@ export function createSceneContext(container: HTMLElement, framingTrack: Track):
     controls,
     trackGroup,
     dispose: () => {
+      if (poseKey) {
+        saveCameraPose(poseKey, {
+          position: [camera.position.x, camera.position.y, camera.position.z],
+          target: [controls.target.x, controls.target.y, controls.target.z],
+        });
+      }
       cancelAnimationFrame(frame);
       observer.disconnect();
       controls.dispose();

@@ -40,7 +40,7 @@ Hash-based SPA routing (`/#/tracks/{id}?mode=...`). Three-panel resizable layout
 
 Two Zustand stores: `tracks.store.ts` (unified track CRUD + localStorage sync) and `metadata.store.ts` (per-track readonly flag, remote load status, errors). Remote tracks are served as static JSON files and fetched lazily on selection.
 
-Workspace modes — `view`, `gates`, `path`, `json` — are controlled via the `?mode=` URL query parameter. The center panel hosts `TrackEditor`, which owns a toolbar (`TrackEditorToolbar`) and a scene panel (`TrackEditorScene`). The toolbar dispatches mode-specific events to the scene. `TrackEditorScene` holds a ref to the current track entry in the tracks store and renders the appropriate mode view.
+Workspace modes — `view`, `gates`, `path`, `json` — are controlled via the `?mode=` URL query parameter. The center panel hosts `TrackEditor`: a toolbar (`TrackEditorToolbar`, mode switcher + export/sharing) above a scene panel (`TrackEditorScene`). All editing interactions live inside the mode views. `TrackEditorScene` holds a ref to the current track entry in the tracks store and renders the appropriate mode view.
 
 Remote catalog tracks are organized into subdirectories (e.g. `public/tracks/RG5/rg5-06.json`). Track IDs are their path relative to `public/tracks/` without the `.json` extension (e.g. `RG5/rg5-06`). The catalog panel renders remote tracks as a tree mirroring this directory hierarchy.
 

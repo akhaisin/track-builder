@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { gateCorners } from '../pathLogic';
 import type { Point3, Track, TrackSegment } from '../../../types/tracks';
 
 /**
@@ -68,26 +69,47 @@ export interface PathLabelAnchor {
   position: [number, number, number];
 }
 
-const LABEL_LIFT = 0.25;
+// How far the step number is inset from the gate's top-right corner, in
+// lattice units, so the half-size number sits inside the first gate.
+const LABEL_INSET = 0.2;
 
-/** One label anchor per path step, at the centroid of the step's segments. (VIZ_003) */
+/** The corner a step number anchors to: top (max y), then right (max x, then max z). */
+function topRightCorner(corners: Point3[]): Point3 {
+  return corners.reduce((best, corner) => {
+    if (corner[1] !== best[1]) return corner[1] > best[1] ? corner : best;
+    if (corner[0] !== best[0]) return corner[0] > best[0] ? corner : best;
+    return corner[2] > best[2] ? corner : best;
+  });
+}
+
+/** One label anchor per path step, inset inside the top-right corner of the step's first gate. (VIZ_003) */
 export function pathLabelAnchors(track: Track): PathLabelAnchor[] {
   return track.path.map((step, index) => {
-    let x = 0;
-    let y = 0;
-    let z = 0;
-    let count = 0;
-    for (const [a, b] of step) {
-      x += a[0] + b[0];
-      y += a[1] + b[1];
-      z += a[2] + b[2];
-      count += 2;
+    const text = String(index + 1);
+    const gate = step[0];
+    const corners = gate ? gateCorners(gate) : [];
+    if (corners.length === 0) {
+      // Empty step or a non-square segment: fall back to its midpoint / origin.
+      const position: Point3 = gate
+        ? [
+            (gate[0][0] + gate[1][0]) / 2,
+            (gate[0][1] + gate[1][1]) / 2,
+            (gate[0][2] + gate[1][2]) / 2,
+          ]
+        : [0, 0, 0];
+      return { text, position };
     }
-    const divisor = Math.max(count, 1);
-    return {
-      text: String(index + 1),
-      position: [x / divisor, y / divisor + LABEL_LIFT, z / divisor],
-    };
+    const corner = topRightCorner(corners);
+    const center: Point3 = [
+      (corners[0][0] + corners[1][0] + corners[2][0] + corners[3][0]) / 4,
+      (corners[0][1] + corners[1][1] + corners[2][1] + corners[3][1]) / 4,
+      (corners[0][2] + corners[1][2] + corners[2][2] + corners[3][2]) / 4,
+    ];
+    const position = corner.map((value, axis) => {
+      const toward = center[axis] - value;
+      return toward === 0 ? value : value + Math.sign(toward) * LABEL_INSET;
+    }) as Point3;
+    return { text, position };
   });
 }
 
@@ -101,14 +123,87 @@ function lineSegments(segments: TrackSegment[], color: string): THREE.LineSegmen
   return new THREE.LineSegments(geometry, material);
 }
 
-/** Structural edges as amber line segments. (VIZ_001) */
-export function buildEdgesObject(track: Track): THREE.LineSegments {
-  return lineSegments(track.edges, cssColor('--tb-color-canvas-line', '#c9993a'));
-}
-
 /** Racing path as a distinct highlighted route. (VIZ_002) */
 export function buildPathObject(track: Track): THREE.LineSegments {
   return lineSegments(pathSegments(track), cssColor('--tb-color-success', '#7ab87a'));
+}
+
+const PIPE_AXIS = new THREE.Vector3(0, 1, 0);
+
+/** Default radius for placed-edge pipes across editor modes. */
+export const PIPE_RADIUS = 0.03;
+
+/** One gate edge as a solid cylinder "pipe" between two lattice points. */
+export function buildPipeMesh(
+  segment: TrackSegment,
+  radius: number,
+  color: string,
+): THREE.Mesh {
+  const start = new THREE.Vector3(...segment[0]);
+  const end = new THREE.Vector3(...segment[1]);
+  const direction = new THREE.Vector3().subVectors(end, start);
+  const length = direction.length();
+  const geometry = new THREE.CylinderGeometry(radius, radius, length, 12);
+  const material = new THREE.MeshBasicMaterial({ color: new THREE.Color(color) });
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.position.copy(start).addScaledVector(direction, 0.5);
+  mesh.quaternion.setFromUnitVectors(PIPE_AXIS, direction.normalize());
+  return mesh;
+}
+
+export interface GateStyle {
+  fill: string;
+  fillOpacity: number;
+  outline: string;
+}
+
+/**
+ * Add a gate (1×1 lattice plane, stored as a diagonal) to `target` as a
+ * translucent fill quad plus an outline loop. Returns the fill mesh (a usable
+ * raycast target) or null for a segment that is not a unit square — those fall
+ * back to a plain line so hand-edited data still shows. (VIZ_014)
+ */
+export function addGateMesh(
+  target: THREE.Object3D,
+  gate: TrackSegment,
+  style: GateStyle,
+): THREE.Mesh | null {
+  const corners = gateCorners(gate);
+  if (corners.length === 0) {
+    const geometry = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(...gate[0]),
+      new THREE.Vector3(...gate[1]),
+    ]);
+    target.add(
+      new THREE.Line(geometry, new THREE.LineBasicMaterial({ color: new THREE.Color(style.fill) })),
+    );
+    return null;
+  }
+  const vectors = corners.map((corner) => new THREE.Vector3(...corner));
+  const fillGeometry = new THREE.BufferGeometry().setFromPoints([
+    vectors[0], vectors[1], vectors[2],
+    vectors[0], vectors[2], vectors[3],
+  ]);
+  const fillMesh = new THREE.Mesh(
+    fillGeometry,
+    new THREE.MeshBasicMaterial({
+      color: new THREE.Color(style.fill),
+      transparent: true,
+      opacity: style.fillOpacity,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    }),
+  );
+  target.add(fillMesh);
+
+  const outlineGeometry = new THREE.BufferGeometry().setFromPoints(vectors);
+  target.add(
+    new THREE.LineLoop(
+      outlineGeometry,
+      new THREE.LineBasicMaterial({ color: new THREE.Color(style.outline) }),
+    ),
+  );
+  return fillMesh;
 }
 
 /** Lattice ground grid with 1-unit cells, sized to the track bounds. (VIZ_001) */
@@ -141,7 +236,7 @@ export function buildLabelSprites(track: Track): THREE.Sprite[] {
     const material = new THREE.SpriteMaterial({ map: texture, depthTest: false });
     const sprite = new THREE.Sprite(material);
     sprite.position.set(...anchor.position);
-    sprite.scale.set(0.6, 0.6, 1);
+    sprite.scale.set(0.3, 0.3, 1);
     sprites.push(sprite);
   }
   return sprites;

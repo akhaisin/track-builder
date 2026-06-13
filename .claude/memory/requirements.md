@@ -92,9 +92,9 @@ metadata:
 
 ### 3D Visualization
 
-- VIZ_001: Render track edges as line segments on a 3D lattice grid using Three.js.
-- VIZ_002: Render the racing path as a distinct highlighted route through gates.
-- VIZ_003: When `show_path_labels` is true, display labeled annotations on each path segment.
+- VIZ_001: Render track edges as solid pipes on a 3D lattice grid using Three.js.
+- VIZ_002: Render the racing path as a distinct highlighted route through gates (translucent gate tiles).
+- VIZ_003: Display a step number for each path step, anchored inside the top-right corner of the step's first gate. Numbers are always shown in view and path modes; the `show_path_labels` track flag is retained in the data model but no longer gates display.
 - VIZ_004: Support interactive camera controls: orbit, zoom, and pan.
 - VIZ_005: The 3D canvas uses a dark background to contrast with track elements.
 
@@ -107,16 +107,17 @@ metadata:
 
 ### Gates Editor
 
-- VIZ_010: Allow adding new gate edges to the lattice grid.
-- VIZ_011: Allow moving existing gate edges by selecting and repositioning their endpoints.
-- VIZ_012: Allow deleting gate edges.
+- VIZ_010: Render placed edges as solid cylinder "pipes". Alongside them, render candidate edges — every unit axis-aligned lattice edge that starts or ends at a node touched by a placed edge — as half-opacity thin lines. Candidates never extend below the floor (no endpoint with y < 0). An empty track seeds candidates around the origin.
+- VIZ_011: Clicking a candidate edge places it (adds it to the track's edges).
+- VIZ_012: Clicking a placed edge removes it (it becomes a candidate again).
 - VIZ_013: Persist all gate edits back to the track store immediately.
+- VIZ_018: Hovering any placed or candidate edge highlights it (warning-color tint, pointer cursor) to show what a click will toggle.
 
 ### Path Editor
 
-- VIZ_014: Allow defining the gate sequence by selecting gates in order.
-- VIZ_015: Allow reordering path segments.
-- VIZ_016: Allow adding and removing path steps.
+- VIZ_014: A path step contains one or more gates. A gate is a 1×1 axis-aligned lattice plane, stored as a diagonal segment (endpoints differ by ±1 on exactly two axes). All gates within a step lie in the same plane and each is edge-connected to another gate of the step. Gates render as translucent filled quads with outlines.
+- VIZ_015: Allow reordering path steps via the steps panel.
+- VIZ_016: Step creation: hovering a placed edge highlights it; clicking selects it (selecting another deselects). The four gates sharing the selected edge appear as candidates; hovering a candidate highlights it. Left-click adds the gate and finishes the step; right-click adds it and offers the in-plane neighbors of the last gate as further candidates (excluding gates already in the draft, gates whose shared side with the last gate is a placed edge — a pipe divides the opening — and unanchored gates — a candidate must touch the structure with at least one corner on a node of a placed edge, which keeps every gate at most one tile from the track while allowing steps to wrap around the structure in shoulder shapes). Stepping straight back across the initiating edge is blocked because that edge is placed, but a step that wraps around the structure may still reach the gate on its far side from another direction. Gates lying flat on the floor (y = 0 plane) or with any corner below it are never offered. Click-away finishes an open draft; Escape discards it. Steps are removed via the panel ✕ or the Delete key.
 - VIZ_017: Persist all path edits back to the track store immediately.
 
 ---

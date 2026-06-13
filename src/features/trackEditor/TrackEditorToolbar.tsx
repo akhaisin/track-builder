@@ -4,12 +4,10 @@ import { useWorkspaceMode, WORKSPACE_MODES } from './workspaceMode';
 import { embedCode, exportTrackAsJson, shareableUrl } from './exportSharing';
 import { useTrack } from '../../store/useTracksStore';
 import type { WorkspaceMode } from './workspaceMode';
-import type { ToolbarEvent } from './toolbarEventBus';
 import styles from './TrackEditor.module.css';
 
 export interface Props {
   trackId?: string;
-  onEvent: (event: ToolbarEvent) => void;
 }
 
 const MODE_LABELS: Record<WorkspaceMode, string> = {
@@ -19,20 +17,14 @@ const MODE_LABELS: Record<WorkspaceMode, string> = {
   json: 'JSON',
 };
 
-type GatesTool = 'select' | 'add';
 type CopiedKind = 'url' | 'embed';
 
-export default function TrackEditorToolbar({ trackId, onEvent }: Props) {
+export default function TrackEditorToolbar({ trackId }: Props) {
   const [mode, setMode] = useWorkspaceMode();
-  const [gatesTool, setGatesTool] = useState<GatesTool>('select');
   const [copied, setCopied] = useState<CopiedKind | null>(null);
   const copiedTimerRef = useRef(0);
   const location = useLocation();
   const track = useTrack(trackId);
-
-  function emit(type: string) {
-    onEvent({ type });
-  }
 
   function copyToClipboard(text: string, kind: CopiedKind) {
     void navigator.clipboard?.writeText(text).then(() => {
@@ -40,11 +32,6 @@ export default function TrackEditorToolbar({ trackId, onEvent }: Props) {
       window.clearTimeout(copiedTimerRef.current);
       copiedTimerRef.current = window.setTimeout(() => setCopied(null), 1500);
     });
-  }
-
-  function selectGatesTool(tool: GatesTool) {
-    setGatesTool(tool);
-    emit(`gates:tool:${tool}`);
   }
 
   return (
@@ -61,39 +48,6 @@ export default function TrackEditorToolbar({ trackId, onEvent }: Props) {
           </button>
         ))}
       </div>
-
-      {mode === 'gates' && trackId && (
-        <div className={styles.toolGroup} role="group" aria-label="Gates tools">
-          <button
-            className={`${styles.modeBtn} ${gatesTool === 'select' ? styles.modeBtnActive : ''}`}
-            aria-pressed={gatesTool === 'select'}
-            onClick={() => selectGatesTool('select')}
-          >
-            Select
-          </button>
-          <button
-            className={`${styles.modeBtn} ${gatesTool === 'add' ? styles.modeBtnActive : ''}`}
-            aria-pressed={gatesTool === 'add'}
-            onClick={() => selectGatesTool('add')}
-          >
-            Add edge
-          </button>
-          <button className={styles.modeBtn} onClick={() => emit('gates:delete-selected')}>
-            Delete
-          </button>
-        </div>
-      )}
-
-      {mode === 'path' && trackId && (
-        <div className={styles.toolGroup} role="group" aria-label="Path tools">
-          <button className={styles.modeBtn} onClick={() => emit('path:new-step')}>
-            New step
-          </button>
-          <button className={styles.modeBtn} onClick={() => emit('path:delete-step')}>
-            Delete step
-          </button>
-        </div>
-      )}
 
       <span className={styles.toolbarTitle}>{trackId ?? 'No track selected'}</span>
 

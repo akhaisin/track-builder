@@ -1,9 +1,11 @@
 import * as THREE from 'three';
 import {
-  buildEdgesObject,
+  addGateMesh,
   buildGrid,
   buildPathObject,
+  buildPipeMesh,
   computeBounds,
+  cssColor,
   flattenSegments,
   pathLabelAnchors,
   pathSegments,
@@ -42,28 +44,41 @@ describe('flattenSegments / pathSegments', () => {
 });
 
 describe('pathLabelAnchors', () => {
-  it('produces one numbered label per path step at the step centroid', () => {
+  it('numbers each step, inset inside the top-right corner of its first gate', () => {
     const anchors = pathLabelAnchors(ladder3);
     expect(anchors).toHaveLength(ladder3.path.length);
     expect(anchors.map((a) => a.text)).toEqual(['1', '2', '3', '4', '5']);
-    // First step is a single segment [[0,0,0],[1,1,0]] → centroid [0.5, 0.5, 0], lifted.
-    expect(anchors[0].position).toEqual([0.5, 0.75, 0]);
+    // First gate [[0,0,0],[1,1,0]] → top-right corner (1,1,0), inset 0.2 inward.
+    expect(anchors[0].position).toEqual([0.8, 0.8, 0]);
   });
 });
 
 describe('geometry builders', () => {
-  it('builds edge line segments with two vertices per edge', () => {
-    const edges = buildEdgesObject(ladder3);
-    const positions = edges.geometry.getAttribute('position');
-    expect(positions.count).toBe(ladder3.edges.length * 2);
+  it('builds the path with a color distinct from the structural edges', () => {
+    const path = buildPathObject(ladder3);
+    const pathColor = (path.material as THREE.LineBasicMaterial).color;
+    const edgeColor = new THREE.Color(cssColor('--tb-color-canvas-line', '#c9993a'));
+    expect(pathColor.getHexString()).not.toBe(edgeColor.getHexString());
   });
 
-  it('builds the path with a distinct color from the edges', () => {
-    const edges = buildEdgesObject(ladder3);
-    const path = buildPathObject(ladder3);
-    const edgeColor = (edges.material as THREE.LineBasicMaterial).color;
-    const pathColor = (path.material as THREE.LineBasicMaterial).color;
-    expect(pathColor.getHexString()).not.toBe(edgeColor.getHexString());
+  it('builds a pipe cylinder spanning the segment', () => {
+    const pipe = buildPipeMesh([[0, 0, 0], [0, 2, 0]], 0.06, '#c9993a');
+    // Positioned at the segment midpoint, as long as the segment.
+    expect(pipe.position.toArray()).toEqual([0, 1, 0]);
+    const geometry = pipe.geometry as THREE.CylinderGeometry;
+    expect(geometry.parameters.height).toBe(2);
+    expect(geometry.parameters.radiusTop).toBe(0.06);
+    // Oriented along the segment: a local +y unit vector maps onto the edge direction.
+    const tip = new THREE.Vector3(0, 1, 0).applyQuaternion(pipe.quaternion);
+    expect(tip.y).toBeCloseTo(1);
+  });
+
+  it('orients pipes along non-vertical segments', () => {
+    const pipe = buildPipeMesh([[0, 0, 0], [1, 0, 0]], 0.06, '#c9993a');
+    expect(pipe.position.toArray()).toEqual([0.5, 0, 0]);
+    const tip = new THREE.Vector3(0, 1, 0).applyQuaternion(pipe.quaternion);
+    expect(tip.x).toBeCloseTo(1);
+    expect(tip.y).toBeCloseTo(0);
   });
 
   it('builds a translucent lattice grid centred on the track', () => {
@@ -73,5 +88,35 @@ describe('geometry builders', () => {
     const material = grid.material as { transparent: boolean; opacity: number };
     expect(material.transparent).toBe(true);
     expect(material.opacity).toBeLessThan(1);
+  });
+});
+
+describe('addGateMesh', () => {
+  it('adds a translucent fill quad plus an outline, returning the fill mesh', () => {
+    const group = new THREE.Group();
+    const fill = addGateMesh(group, [[0, 0, 0], [1, 1, 0]], {
+      fill: '#7ab87a',
+      fillOpacity: 0.3,
+      outline: '#7ab87a',
+    });
+    expect(fill).toBeInstanceOf(THREE.Mesh);
+    const material = fill!.material as THREE.MeshBasicMaterial;
+    expect(material.transparent).toBe(true);
+    expect(material.opacity).toBe(0.3);
+    // Fill is two triangles (6 vertices); outline is a 4-corner loop.
+    expect(fill!.geometry.getAttribute('position').count).toBe(6);
+    expect(group.children.some((child) => child instanceof THREE.LineLoop)).toBe(true);
+  });
+
+  it('falls back to a line and returns null for a non-square segment', () => {
+    const group = new THREE.Group();
+    const result = addGateMesh(group, [[0, 0, 0], [1, 0, 0]], {
+      fill: '#ffffff',
+      fillOpacity: 0.3,
+      outline: '#ffffff',
+    });
+    expect(result).toBeNull();
+    expect(group.children).toHaveLength(1);
+    expect(group.children[0]).toBeInstanceOf(THREE.Line);
   });
 });

@@ -134,15 +134,13 @@ describe('workspace modes', () => {
     expect(await screen.findByText(/3D view unavailable/)).toBeInTheDocument();
   });
 
-  it('mounts the gates editor with its toolbar tools in gates mode', async () => {
+  it('mounts the gates editor without toolbar tools in gates mode', async () => {
     seedLocalTrack();
     renderEditor('track-001', '/?mode=gates');
-    // Gates tool buttons appear in the main toolbar (WS_013).
-    expect(screen.getByRole('group', { name: 'Gates tools' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Add edge' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument();
     // jsdom has no WebGL, so the editor surface falls back.
     expect(await screen.findByText(/3D view unavailable/)).toBeInTheDocument();
+    // Editing is click-to-toggle in the scene; no gates tool group exists.
+    expect(screen.queryByRole('group', { name: 'Gates tools' })).not.toBeInTheDocument();
   });
 
   it('shows a read-only notice in gates mode for catalog tracks', async () => {
@@ -168,8 +166,10 @@ describe('workspace modes', () => {
     expect(await screen.findByText('Path steps')).toBeInTheDocument();
     expect(screen.getByText('Step 1')).toBeInTheDocument();
     expect(screen.getByText('Step 2')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'New step' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Delete step' })).toBeInTheDocument();
+    // Steps are gate lists; creation happens in the 3D view, not the toolbar.
+    expect(screen.getAllByText('1 gate')).toHaveLength(2);
+    expect(screen.queryByRole('group', { name: 'Path tools' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'New step' })).not.toBeInTheDocument();
   });
 
   it('reorders and removes path steps from the steps panel, persisting to the store', async () => {

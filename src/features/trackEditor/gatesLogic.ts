@@ -15,37 +15,61 @@ export function edgeExists(track: Track, a: Point3, b: Point3): boolean {
   return track.edges.some((edge) => segmentMatches(edge, a, b));
 }
 
-/** Add an edge; rejects zero-length and duplicate edges. (VIZ_010) */
-export function addEdge(track: Track, a: Point3, b: Point3): Track | null {
-  if (pointsEqual(a, b) || edgeExists(track, a, b)) return null;
+const AXIS_OFFSETS: Point3[] = [
+  [1, 0, 0],
+  [-1, 0, 0],
+  [0, 1, 0],
+  [0, -1, 0],
+  [0, 0, 1],
+  [0, 0, -1],
+];
+
+/**
+ * Candidate edges: every unit axis-aligned lattice edge touching a node of a
+ * placed edge, minus the placed edges themselves. Candidates never extend
+ * below the floor (y < 0). An empty track seeds candidates around the origin
+ * so there is always something to click. (VIZ_010)
+ */
+export function candidateEdges(track: Track): TrackSegment[] {
+  const nodes: Point3[] = [];
+  const nodeKeys = new Set<string>();
+  function addNode(point: Point3) {
+    const key = point.join(',');
+    if (nodeKeys.has(key)) return;
+    nodeKeys.add(key);
+    nodes.push(point);
+  }
+  for (const [a, b] of track.edges) {
+    addNode(a);
+    addNode(b);
+  }
+  if (nodes.length === 0) addNode([0, 0, 0]);
+
+  const candidates: TrackSegment[] = [];
+  const seen = new Set<string>();
+  for (const node of nodes) {
+    for (const offset of AXIS_OFFSETS) {
+      const neighbor: Point3 = [
+        node[0] + offset[0],
+        node[1] + offset[1],
+        node[2] + offset[2],
+      ];
+      if (Math.min(node[1], neighbor[1]) < 0) continue;
+      const key = [node.join(','), neighbor.join(',')].sort().join('|');
+      if (seen.has(key)) continue;
+      seen.add(key);
+      if (!edgeExists(track, node, neighbor)) candidates.push([node, neighbor]);
+    }
+  }
+  return candidates;
+}
+
+/** Toggle an edge: placed → removed (back to candidate), otherwise → placed. (VIZ_011, VIZ_012) */
+export function toggleEdge(track: Track, a: Point3, b: Point3): Track {
+  if (edgeExists(track, a, b)) {
+    return { ...track, edges: track.edges.filter((edge) => !segmentMatches(edge, a, b)) };
+  }
   return { ...track, edges: [...track.edges, [a, b]] };
-}
-
-/** Delete the edge at `index`. (VIZ_012) */
-export function deleteEdge(track: Track, index: number): Track {
-  return { ...track, edges: track.edges.filter((_, i) => i !== index) };
-}
-
-/** Reposition one endpoint of an edge; rejects degenerate results. (VIZ_011) */
-export function moveEdgeEndpoint(
-  track: Track,
-  index: number,
-  end: 0 | 1,
-  point: Point3,
-): Track | null {
-  const edge = track.edges[index];
-  if (!edge) return null;
-  const other = edge[end === 0 ? 1 : 0];
-  if (pointsEqual(point, other)) return null;
-  const moved: TrackSegment = end === 0 ? [point, other] : [other, point];
-  const duplicate = track.edges.some(
-    (candidate, i) => i !== index && segmentMatches(candidate, moved[0], moved[1]),
-  );
-  if (duplicate) return null;
-  return {
-    ...track,
-    edges: track.edges.map((candidate, i) => (i === index ? moved : candidate)),
-  };
 }
 
 /** Snap a world-space position to the integer lattice. */
