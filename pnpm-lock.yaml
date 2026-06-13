@@ -12,8 +12,8 @@ importers:
         specifier: ^1.29.0
         version: 1.29.0(react@19.2.5)
       mefly-nav:
-        specifier: github:akhaisin/mefly.dev#mefly-nav-0.1.5&path:/packages/mefly-nav
-        version: https://codeload.github.com/akhaisin/mefly.dev/tar.gz/ef287c9d37b7b630487598203a63931ae06bf5cd#path:/packages/mefly-nav(react-dom@19.2.5(react@19.2.5))(react-router-dom@7.14.2(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(react@19.2.5)
+        specifier: github:akhaisin/mefly.dev#mefly-nav-0.1.5&path:packages/mefly-nav
+        version: https://codeload.github.com/akhaisin/mefly.dev/tar.gz/ef287c9d37b7b630487598203a63931ae06bf5cd#path:packages/mefly-nav(react-dom@19.2.5(react@19.2.5))(react-router-dom@7.14.2(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(react@19.2.5)
       react:
         specifier: ^19.2.5
         version: 19.2.5
@@ -1025,7 +1025,7 @@ packages:
   mdn-data@2.27.1:
     resolution: {integrity: sha512-9Yubnt3e8A0OKwxYSXyhLymGW4sCufcLG6VdiDdUGVkPhpqLxlvP5vl1983gQjJl3tqbrM731mjaZaP68AgosQ==}
 
-  mefly-nav@https://codeload.github.com/akhaisin/mefly.dev/tar.gz/ef287c9d37b7b630487598203a63931ae06bf5cd#path:/packages/mefly-nav:
+  mefly-nav@https://codeload.github.com/akhaisin/mefly.dev/tar.gz/ef287c9d37b7b630487598203a63931ae06bf5cd#path:packages/mefly-nav:
     resolution: {gitHosted: true, integrity: sha512-siSYZ2TlrHLAGrTh+xq+HYcTbeDQfOagBzZDUPdmFA+WwxJSgdjtFaigBENWy7gO7cvsEUGoxx7UpnQ9PljOPw==, tarball: https://codeload.github.com/akhaisin/mefly.dev/tar.gz/ef287c9d37b7b630487598203a63931ae06bf5cd}
     version: 0.1.5
     peerDependencies:
@@ -2340,7 +2340,7 @@ snapshots:
 
   mdn-data@2.27.1: {}
 
-  mefly-nav@https://codeload.github.com/akhaisin/mefly.dev/tar.gz/ef287c9d37b7b630487598203a63931ae06bf5cd#path:/packages/mefly-nav(react-dom@19.2.5(react@19.2.5))(react-router-dom@7.14.2(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(react@19.2.5):
+  mefly-nav@https://codeload.github.com/akhaisin/mefly.dev/tar.gz/ef287c9d37b7b630487598203a63931ae06bf5cd#path:packages/mefly-nav(react-dom@19.2.5(react@19.2.5))(react-router-dom@7.14.2(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(react@19.2.5):
     dependencies:
       react: 19.2.5
       react-dom: 19.2.5(react@19.2.5)
