@@ -34,15 +34,7 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-        
-      - name: Inspect mefly-nav install
-        run: |
-          echo "=== package dir ==="
-          ls -la node_modules/mefly-nav || true
-          echo "=== package.json ==="
-          cat node_modules/mefly-nav/package.json || true
-          echo "=== files ==="
-          find node_modules/mefly-nav -maxdepth 3 -type f | sort || true
+
       - name: Build app
         run: pnpm build
 
