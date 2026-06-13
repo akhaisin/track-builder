@@ -90,16 +90,19 @@
   align-items: center;
   gap: var(--tb-space-xs);
   width: fit-content;
-  padding: var(--tb-space-xs);
+  padding: var(--tb-space-xs) var(--tb-space-sm);
   border-radius: var(--tb-radius-sm);
   background: rgba(30, 26, 20, 0.8);
+  color: var(--tb-color-accent-bg);
+  font-size: var(--tb-font-size-sm);
 }
 
 .levelValue {
-  min-width: 4.5rem;
-  text-align: center;
+  min-width: 2.5rem;
+  text-align: right;
   color: var(--tb-color-accent-bg);
   font-size: var(--tb-font-size-sm);
+  font-variant-numeric: tabular-nums;
 }
 
 .iconBtnDark {
@@ -116,6 +119,17 @@
 
 .iconBtnDark:hover {
   background: rgba(243, 228, 200, 0.15);
+}
+
+.iconBtnActive {
+  background: var(--tb-color-accent-bg);
+  border-color: var(--tb-color-accent);
+  color: var(--tb-color-canvas-bg);
+  font-weight: 600;
+}
+
+.iconBtnActive:hover {
+  background: var(--tb-color-accent);
 }
 
 .viewerHint {

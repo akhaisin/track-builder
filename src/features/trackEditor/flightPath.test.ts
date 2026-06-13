@@ -1,8 +1,11 @@
-import { flightControlPoints, flightWaypoints, gateCenter, roundCorners } from './flightPath';
+import {
+  flightControlPoints,
+  flightWaypoints,
+  gateCenter,
+  relaxWaypoints,
+  roundCorners,
+} from './flightPath';
 import type { Point3, Track } from '../../types/tracks';
-import ladder3Json from '../../../public/tracks/elements/ladder3.json';
-
-const ladder3 = ladder3Json as Track;
 
 describe('gateCenter', () => {
   it('is the midpoint of the gate diagonal', () => {
@@ -13,14 +16,17 @@ describe('gateCenter', () => {
 
 describe('flightWaypoints', () => {
   it('takes the center of the first gate of each step, in order', () => {
-    // ladder3 has 5 steps; steps 2 and 4 have two gates each — only the first
-    // gate of each step contributes a waypoint.
-    expect(flightWaypoints(ladder3)).toEqual([
+    // A multi-gate step contributes only its first gate's center.
+    const track: Track = {
+      edges: [],
+      path: [
+        { gates: [[[1, 0, 0], [0, 1, 0]]] },
+        { gates: [[[1, 0, 0], [2, 1, 0]], [[1, 1, 0], [2, 2, 0]]] },
+      ],
+    };
+    expect(flightWaypoints(track)).toEqual([
       [0.5, 0.5, 0],
       [1.5, 0.5, 0],
-      [0.5, 1.5, 0],
-      [-0.5, 1.5, 0],
-      [0.5, 2.5, 0],
     ]);
   });
 
@@ -47,14 +53,14 @@ describe('flightControlPoints', () => {
   });
 
   it('straddles the center with a pierce pair along the entry direction', () => {
-    // A z=0 gate centered at (0.5, 0.5, 0); entry "backward" is +z.
+    // A z=0 gate centered at (0.5, 0.5, 0); entry "backward" is +z. PIERCE = 0.2.
     const track: Track = {
       edges: [],
       path: [{ gates: [[[1, 0, 0], [0, 1, 0]]], entry: 'backward' }],
     };
     expect(flightControlPoints(track)).toEqual([
-      [0.5, 0.5, -0.5],
-      [0.5, 0.5, 0.5],
+      [0.5, 0.5, -0.2],
+      [0.5, 0.5, 0.2],
     ]);
   });
 
@@ -64,8 +70,8 @@ describe('flightControlPoints', () => {
       path: [{ gates: [[[1, 0, 0], [0, 1, 0]]], entry: 'forward' }],
     };
     expect(flightControlPoints(track)).toEqual([
-      [0.5, 0.5, 0.5],
-      [0.5, 0.5, -0.5],
+      [0.5, 0.5, 0.2],
+      [0.5, 0.5, -0.2],
     ]);
   });
 
@@ -76,6 +82,45 @@ describe('flightControlPoints', () => {
       path: [{ gates: [[[1, 0, 0], [0, 1, 0]]], entry: 'up' }],
     };
     expect(flightControlPoints(track)).toEqual([[0.5, 0.5, 0]]);
+  });
+
+  it('relaxes gate centers toward their neighbors under a max deviation', () => {
+    const track: Track = {
+      edges: [],
+      path: [
+        { gates: [[[0, 0, 0], [1, 1, 0]]] }, // center 0.5,0.5,0
+        { gates: [[[1, 0, 0], [2, 1, 0]]] }, // center 1.5,0.5,0
+        { gates: [[[1, 1, 0], [2, 2, 0]]] }, // center 1.5,1.5,0
+      ],
+    };
+    expect(flightControlPoints(track)[1]).toEqual([1.5, 0.5, 0]);
+    // Middle center slides toward the (0.5,0.5,0)/(1.5,1.5,0) midpoint (1,1,0) by 0.3.
+    const relaxed = flightControlPoints(track, 0.3)[1];
+    expect(relaxed).not.toEqual([1.5, 0.5, 0]);
+    expect(Math.hypot(relaxed[0] - 1.5, relaxed[1] - 0.5, relaxed[2])).toBeCloseTo(0.3);
+  });
+});
+
+describe('relaxWaypoints', () => {
+  it('leaves loops untouched for zero deviation or fewer than three points', () => {
+    const pts: Point3[] = [[0, 0, 0], [2, 0, 0], [2, 2, 0]];
+    expect(relaxWaypoints(pts, 0)).toBe(pts);
+    expect(relaxWaypoints([[0, 0, 0], [1, 0, 0]], 0.5)).toHaveLength(2);
+  });
+
+  it('slides each point toward its neighbor midpoint, capped at maxDeviation', () => {
+    const pts: Point3[] = [[-2, 0, 0], [0, 0, 0], [0, 2, 0]];
+    const moved = relaxWaypoints(pts, 0.5)[1]; // neighbor midpoint (-1,1,0)
+    expect(Math.hypot(moved[0], moved[1], moved[2])).toBeCloseTo(0.5);
+    expect(moved[0]).toBeLessThan(0);
+    expect(moved[1]).toBeGreaterThan(0);
+  });
+
+  it('reaches the midpoint when it is nearer than maxDeviation', () => {
+    const pts: Point3[] = [[-0.2, 0, 0], [0, 0, 0], [0, 0.2, 0]];
+    const moved = relaxWaypoints(pts, 0.5)[1]; // midpoint (-0.1, 0.1, 0)
+    expect(moved[0]).toBeCloseTo(-0.1);
+    expect(moved[1]).toBeCloseTo(0.1);
   });
 });
 

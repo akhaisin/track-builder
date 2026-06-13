@@ -18,8 +18,10 @@ import {
   entryVector,
   moveStep,
   nextGateCandidates,
+  pathStepLabels,
   removeStep,
   segmentsEqual,
+  toggleStepAux,
 } from './pathLogic';
 import { gateCenter } from './flightPath';
 import { updateTrack } from '../../store/trackActions';
@@ -399,6 +401,12 @@ export default function PathEditor({ trackId, track }: Props) {
     setSelectedStep(null);
   }
 
+  function handleToggleAux(index: number) {
+    commit(toggleStepAux(track, index));
+  }
+
+  const stepLabels = pathStepLabels(track.path);
+
   const hint =
     draft.length > 0
       ? 'Right-click adds another gate; left-click a gate adds it and finishes the step. Click away to finish, Esc to cancel.'
@@ -437,13 +445,25 @@ export default function PathEditor({ trackId, track }: Props) {
                   if (keyEvent.key === 'Enter') setSelectedStep(index);
                 }}
               >
-                <span className={styles.stepLabel}>Step {index + 1}</span>
+                <span className={styles.stepLabel}>Step {stepLabels[index]}</span>
                 <span className={styles.stepMeta}>
                   {step.gates.length} gate{step.gates.length === 1 ? '' : 's'}
                 </span>
                 <button
+                  className={`${styles.iconBtnDark} ${step.aux ? styles.iconBtnActive : ''}`}
+                  aria-label={`Toggle auxiliary for step ${stepLabels[index]}`}
+                  aria-pressed={step.aux ?? false}
+                  title="Auxiliary exit guide"
+                  onClick={(clickEvent) => {
+                    clickEvent.stopPropagation();
+                    handleToggleAux(index);
+                  }}
+                >
+                  A
+                </button>
+                <button
                   className={styles.iconBtnDark}
-                  aria-label={`Move step ${index + 1} up`}
+                  aria-label={`Move step ${stepLabels[index]} up`}
                   disabled={index === 0}
                   onClick={(clickEvent) => {
                     clickEvent.stopPropagation();
@@ -454,7 +474,7 @@ export default function PathEditor({ trackId, track }: Props) {
                 </button>
                 <button
                   className={styles.iconBtnDark}
-                  aria-label={`Move step ${index + 1} down`}
+                  aria-label={`Move step ${stepLabels[index]} down`}
                   disabled={index === track.path.length - 1}
                   onClick={(clickEvent) => {
                     clickEvent.stopPropagation();
@@ -465,7 +485,7 @@ export default function PathEditor({ trackId, track }: Props) {
                 </button>
                 <button
                   className={styles.iconBtnDark}
-                  aria-label={`Remove step ${index + 1}`}
+                  aria-label={`Remove step ${stepLabels[index]}`}
                   onClick={(clickEvent) => {
                     clickEvent.stopPropagation();
                     handleRemoveStep(index);

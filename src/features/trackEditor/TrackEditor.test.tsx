@@ -196,6 +196,27 @@ describe('workspace modes', () => {
     expect(stored['track-001'].path).toEqual([stepA]);
   });
 
+  it('toggles a step to auxiliary and sub-numbers it from the steps panel', async () => {
+    const user = userEvent.setup();
+    seedLocalTrack();
+    tracksStore.getState().setTrack('track-001', {
+      name: 'track-001',
+      edges: [],
+      path: [
+        { gates: [[[0, 0, 0], [1, 1, 0]]] },
+        { gates: [[[1, 0, 0], [0, 1, 0]]] },
+      ],
+    });
+    renderEditor('track-001', '/?mode=path');
+
+    await user.click(
+      await screen.findByRole('button', { name: 'Toggle auxiliary for step 2' }),
+    );
+    expect(tracksStore.getState().tracks['track-001'].path[1].aux).toBe(true);
+    // Step 2 is now an aux of step 1.
+    expect(screen.getByText('Step 1-1')).toBeInTheDocument();
+  });
+
   it('shows a read-only notice in path mode for catalog tracks', async () => {
     tracksStore.getState().setTrack('RG5/rg5-06', { name: 'rg5', edges: [], path: [] });
     metadataStore.setState({

@@ -49,11 +49,14 @@ export function directionFromVector(v: Point3): Direction | null {
 /**
  * A path step: one or more coplanar, edge-connected gates flown as a unit.
  * `entry` is the travel direction through the step's gate, chosen when the
- * step's first gate is placed; absent means unspecified. (VIZ_014, VIZ_021)
+ * step's first gate is placed; absent means unspecified. An `aux` step is an
+ * exit guide tied to the previous main step: it still shapes the flight path
+ * but is hidden in view mode and sub-numbered (e.g. 1-1). (VIZ_014, VIZ_021, VIZ_022)
  */
 export interface PathStep {
   gates: TrackSegment[];
   entry?: Direction;
+  aux?: boolean;
 }
 
 /**
@@ -112,6 +115,7 @@ function isPathStep(value: unknown): value is PathStep {
   const step = value as Record<string, unknown>;
   if (!Array.isArray(step.gates) || !step.gates.every(isSegment)) return false;
   if (step.entry !== undefined && !isDirection(step.entry)) return false;
+  if (step.aux !== undefined && typeof step.aux !== 'boolean') return false;
   return true;
 }
 

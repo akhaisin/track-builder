@@ -60,7 +60,8 @@ describe('TracksBuilderPage', () => {
 
   it('lazily loads the track from the URL, including IDs with slashes', async () => {
     renderPage('/tracks/elements/ladder3');
-    expect((await screen.findAllByText(/ladder 3/)).length).toBeGreaterThan(0);
+    // Match the seed track's own name so this survives edits to the demo seed.
+    expect((await screen.findAllByText(new RegExp(ladder3.name ?? 'ladder3'))).length).toBeGreaterThan(0);
     expect(metadataStore.getState().byId['elements/ladder3']?.loadStatus).toBe('loaded');
     expect(tracksStore.getState().tracks['elements/ladder3']).toBeDefined();
   });

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { gateCorners } from '../pathLogic';
+import { gateCorners, pathStepLabels } from '../pathLogic';
 import type { Point3, Track, TrackSegment } from '../../../types/tracks';
 
 /**
@@ -67,6 +67,8 @@ export function pathSegments(track: Track): TrackSegment[] {
 export interface PathLabelAnchor {
   text: string;
   position: [number, number, number];
+  /** Whether this anchor belongs to an auxiliary step (hidden in view mode). (VIZ_022) */
+  aux: boolean;
 }
 
 // How far the step number is inset from the gate's top-right corner, in
@@ -82,10 +84,12 @@ function topRightCorner(corners: Point3[]): Point3 {
   });
 }
 
-/** One label anchor per path step, inset inside the top-right corner of the step's first gate. (VIZ_003) */
+/** One label anchor per path step, inset inside the top-right corner of the step's first gate. (VIZ_003, VIZ_022) */
 export function pathLabelAnchors(track: Track): PathLabelAnchor[] {
+  const labels = pathStepLabels(track.path);
   return track.path.map((step, index) => {
-    const text = String(index + 1);
+    const text = labels[index];
+    const aux = step.aux ?? false;
     const gate = step.gates[0];
     const corners = gate ? gateCorners(gate) : [];
     if (corners.length === 0) {
@@ -97,7 +101,7 @@ export function pathLabelAnchors(track: Track): PathLabelAnchor[] {
             (gate[0][2] + gate[1][2]) / 2,
           ]
         : [0, 0, 0];
-      return { text, position };
+      return { text, position, aux };
     }
     const corner = topRightCorner(corners);
     const center: Point3 = [
@@ -109,7 +113,7 @@ export function pathLabelAnchors(track: Track): PathLabelAnchor[] {
       const toward = center[axis] - value;
       return toward === 0 ? value : value + Math.sign(toward) * LABEL_INSET;
     }) as Point3;
-    return { text, position };
+    return { text, position, aux };
   });
 }
 
@@ -293,10 +297,18 @@ export function buildGrid(bounds: SceneBounds): THREE.GridHelper {
   return grid;
 }
 
-/** Numbered sprite labels for path steps; empty when 2D canvas is unavailable. */
-export function buildLabelSprites(track: Track): THREE.Sprite[] {
+/**
+ * Numbered sprite labels for path steps; empty when 2D canvas is unavailable.
+ * Auxiliary steps are omitted when `includeAux` is false (view mode). (VIZ_022)
+ */
+export function buildLabelSprites(
+  track: Track,
+  options?: { includeAux?: boolean },
+): THREE.Sprite[] {
+  const includeAux = options?.includeAux ?? true;
   const sprites: THREE.Sprite[] = [];
   for (const anchor of pathLabelAnchors(track)) {
+    if (!includeAux && anchor.aux) continue;
     const canvas = document.createElement('canvas');
     canvas.width = 128;
     canvas.height = 128;

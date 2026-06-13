@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { flightControlPoints, flightWaypoints, roundCorners } from '../flightPath';
+import { flightControlPoints, flightWaypoints } from '../flightPath';
 import { buildQuadcopter, cssColor, disposeObject } from './sceneBuilders';
 import type { Track } from '../../../types/tracks';
 
@@ -12,10 +12,6 @@ const BASE_ALPHA = 0.12;
 const MAX_ALPHA = 0.9;
 // Arc-length-even samples along the loop for the trail line.
 const SAMPLES = 300;
-// Corner fillet size, in lattice units: how far before/after each gate center
-// the path starts rounding. Larger = softer turns (drone clips further inside
-// the gate); clamped per-edge so it never exceeds half an edge. (VIZ_019)
-const CORNER_RADIUS = 0.0;
 // Cap the trail so it never wraps far enough to overlap its own head on a
 // short loop (which would put a brightness seam right at the drone).
 const MAX_TRAIL_FRAC = 0.9;
@@ -57,19 +53,22 @@ const TRAIL_FRAGMENT_SHADER = `
 `;
 
 /**
- * A quadcopter that flies the racing path — a closed Catmull-Rom curve through
- * the center of each step's first gate — trailing a thin line whose opacity
- * fades behind it. Returns `null` when the path has fewer than two gates, since
- * there is nothing to fly. (VIZ_019, VIZ_020)
+ * A quadcopter that flies the racing path — a closed centripetal Catmull-Rom
+ * curve through each step's gate (relaxed toward neighbors by `maxDeviation`
+ * lattice units for smoother turns) — trailing a thin line whose opacity fades
+ * behind it. Centripetal parameterization keeps the curvature even across the
+ * unevenly spaced control points. Returns `null` when the path has fewer than
+ * two gates, since there is nothing to fly. (VIZ_019, VIZ_020, VIZ_023)
  */
-export function createFlightAnimation(track: Track): FlightAnimation | null {
+export function createFlightAnimation(
+  track: Track,
+  maxDeviation = 0,
+): FlightAnimation | null {
   // One waypoint per step with a gate; need at least two to form a loop.
   if (flightWaypoints(track).length < 2) return null;
 
-  const points = roundCorners(flightControlPoints(track), CORNER_RADIUS).map(
-    (p) => new THREE.Vector3(...p),
-  );
-  const curve = new THREE.CatmullRomCurve3(points, true, 'catmullrom');
+  const points = flightControlPoints(track, maxDeviation).map((p) => new THREE.Vector3(...p));
+  const curve = new THREE.CatmullRomCurve3(points, true, 'centripetal');
   const length = curve.getLength();
   const duration = length / SPEED; // seconds per loop
   const trailFrac = Math.min((TRAIL_SECONDS * SPEED) / length, MAX_TRAIL_FRAC);

@@ -27,29 +27,63 @@ export function flightWaypoints(track: Track): Point3[] {
 // step's entry direction, instead of cutting the shortest diagonal. (VIZ_021)
 const PIERCE = 0.2;
 
+/** Move `from` toward `to`, but at most `maxDist` lattice units. */
+function clampToward(from: Point3, to: Point3, maxDist: number): Point3 {
+  const d: Point3 = [to[0] - from[0], to[1] - from[1], to[2] - from[2]];
+  const len = Math.hypot(d[0], d[1], d[2]);
+  if (len === 0 || len <= maxDist) return to;
+  const s = maxDist / len;
+  return [from[0] + d[0] * s, from[1] + d[1] * s, from[2] + d[2] * s];
+}
+
 /**
- * Control points for the flight curve. A step whose `entry` is parallel to its
- * gate's normal contributes a pierce pair straddling the gate center along the
- * entry direction; an undirected step contributes just the center, so the curve
- * threads it without a forced crossing side. (VIZ_019, VIZ_021)
+ * Relax a closed loop of waypoints toward each point's neighbor midpoint
+ * (corner cutting), clamped so none moves more than `maxDeviation` lattice
+ * units from where it started. Rounds sharp turns into a smoother flight line
+ * while keeping the curve within `maxDeviation` of every gate center. (VIZ_023)
  */
-export function flightControlPoints(track: Track): Point3[] {
-  const points: Point3[] = [];
+export function relaxWaypoints(points: Point3[], maxDeviation: number): Point3[] {
+  const n = points.length;
+  if (n < 3 || maxDeviation <= 0) return points;
+  return points.map((p, i) => {
+    const prev = points[(i - 1 + n) % n];
+    const next = points[(i + 1) % n];
+    const mid: Point3 = [
+      (prev[0] + next[0]) / 2,
+      (prev[1] + next[1]) / 2,
+      (prev[2] + next[2]) / 2,
+    ];
+    return clampToward(p, mid, maxDeviation);
+  });
+}
+
+/**
+ * Control points for the flight curve. Gate centers — relaxed toward their
+ * neighbors by up to `maxDeviation` for softer turns — thread the loop; a step
+ * whose `entry` is parallel to its gate normal contributes a pierce pair
+ * straddling its (relaxed) center along the entry direction, so the curve still
+ * crosses the gate perpendicular on the intended side. (VIZ_019, VIZ_021, VIZ_023)
+ */
+export function flightControlPoints(track: Track, maxDeviation = 0): Point3[] {
+  const raw: Point3[] = [];
   for (const step of track.path) {
     const gate = step.gates[0];
     if (!gate) continue;
     const c = gateCenter(gate);
     const dir = step.entry ? entryVector(gate, step.entry) : null;
     if (dir) {
-      points.push(
+      raw.push(
         [c[0] - dir[0] * PIERCE, c[1] - dir[1] * PIERCE, c[2] - dir[2] * PIERCE],
         [c[0] + dir[0] * PIERCE, c[1] + dir[1] * PIERCE, c[2] + dir[2] * PIERCE],
       );
     } else {
-      points.push(c);
+      raw.push(c);
     }
   }
-  return points;
+  // Relax the whole control polygon — centers *and* pierce points together — so
+  // raising the deviation rounds turns coherently (more curvature) instead of
+  // kinking the pierce segment at each directed gate. (VIZ_023)
+  return relaxWaypoints(raw, maxDeviation);
 }
 
 function sub(a: Point3, b: Point3): Point3 {

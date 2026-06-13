@@ -18,11 +18,15 @@ const ladder3 = ladder3Json as Track;
 
 describe('computeBounds', () => {
   it('spans all edge and path points', () => {
-    const bounds = computeBounds(ladder3);
+    const track: Track = {
+      edges: [[[-1, 0, 0], [1, 2, 0]]],
+      path: [{ gates: [[[0, 0, 0], [2, 1, 3]]] }],
+    };
+    const bounds = computeBounds(track);
     expect(bounds.min).toEqual([-1, 0, 0]);
-    expect(bounds.max).toEqual([2, 3, 0]);
-    expect(bounds.center).toEqual([0.5, 1.5, 0]);
-    expect(bounds.radius).toBeCloseTo(Math.hypot(1.5, 1.5, 0));
+    expect(bounds.max).toEqual([2, 2, 3]);
+    expect(bounds.center).toEqual([0.5, 1, 1.5]);
+    expect(bounds.radius).toBeCloseTo(Math.hypot(1.5, 1, 1.5));
   });
 
   it('returns a safe default for an empty track', () => {
@@ -46,11 +50,31 @@ describe('flattenSegments / pathSegments', () => {
 
 describe('pathLabelAnchors', () => {
   it('numbers each step, inset inside the top-right corner of its first gate', () => {
-    const anchors = pathLabelAnchors(ladder3);
-    expect(anchors).toHaveLength(ladder3.path.length);
-    expect(anchors.map((a) => a.text)).toEqual(['1', '2', '3', '4', '5']);
+    const track: Track = {
+      edges: [],
+      path: [
+        { gates: [[[0, 0, 0], [1, 1, 0]]] },
+        { gates: [[[1, 0, 0], [2, 1, 0]]] },
+      ],
+    };
+    const anchors = pathLabelAnchors(track);
+    expect(anchors.map((a) => a.text)).toEqual(['1', '2']);
     // First gate [[0,0,0],[1,1,0]] → top-right corner (1,1,0), inset 0.2 inward.
     expect(anchors[0].position).toEqual([0.8, 0.8, 0]);
+  });
+
+  it('sub-numbers aux steps and flags them', () => {
+    const track: Track = {
+      edges: [],
+      path: [
+        { gates: [[[0, 0, 0], [1, 1, 0]]] },
+        { gates: [[[0, 0, 0], [1, 1, 0]]], aux: true },
+        { gates: [[[0, 0, 0], [1, 1, 0]]] },
+      ],
+    };
+    const anchors = pathLabelAnchors(track);
+    expect(anchors.map((a) => a.text)).toEqual(['1', '1-1', '2']);
+    expect(anchors.map((a) => a.aux)).toEqual([false, true, false]);
   });
 });
 

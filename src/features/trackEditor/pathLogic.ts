@@ -210,6 +210,39 @@ export function removeStep(track: Track, stepIndex: number): Track {
   return { ...track, path: track.path.filter((_, i) => i !== stepIndex) };
 }
 
+/** Toggle a step's auxiliary flag, dropping the prop when turned off. (VIZ_022) */
+export function toggleStepAux(track: Track, stepIndex: number): Track {
+  const path = track.path.map((step, i) => {
+    if (i !== stepIndex) return step;
+    if (step.aux) {
+      const rest = { ...step };
+      delete rest.aux;
+      return rest;
+    }
+    return { ...step, aux: true };
+  });
+  return { ...track, path };
+}
+
+/**
+ * Display label per step. Main steps count up (1, 2, …); each aux step is
+ * sub-numbered against the most recent main step (e.g. 1-1, 1-2). Aux steps
+ * before any main step hang off step 0 (0-1). (VIZ_022)
+ */
+export function pathStepLabels(path: PathStep[]): string[] {
+  let main = 0;
+  let aux = 0;
+  return path.map((step) => {
+    if (step.aux) {
+      aux += 1;
+      return `${main}-${aux}`;
+    }
+    main += 1;
+    aux = 0;
+    return String(main);
+  });
+}
+
 /** Reorder: move the step at `from` to position `to`. (VIZ_015) */
 export function moveStep(track: Track, from: number, to: number): Track {
   if (

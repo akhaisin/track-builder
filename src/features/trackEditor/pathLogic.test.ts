@@ -9,7 +9,9 @@ import {
   gatesEqual,
   moveStep,
   nextGateCandidates,
+  pathStepLabels,
   removeStep,
+  toggleStepAux,
 } from './pathLogic';
 import type { Gate } from './pathLogic';
 import type { Track, TrackSegment } from '../../types/tracks';
@@ -239,6 +241,40 @@ describe('removeStep', () => {
   it('removes the step at the index', () => {
     const next = removeStep(makeTrack(), 0);
     expect(next.path).toEqual([{ gates: [gateLeft] }]);
+  });
+});
+
+describe('pathStepLabels', () => {
+  it('numbers main steps and sub-numbers aux steps against the prior main', () => {
+    const path = [
+      { gates: [gateRight] },
+      { gates: [gateRight], aux: true },
+      { gates: [gateRight], aux: true },
+      { gates: [gateRight] },
+      { gates: [gateRight], aux: true },
+    ];
+    expect(pathStepLabels(path)).toEqual(['1', '1-1', '1-2', '2', '2-1']);
+  });
+
+  it('hangs leading aux steps off step zero', () => {
+    expect(pathStepLabels([{ gates: [gateRight], aux: true }, { gates: [gateRight] }])).toEqual([
+      '0-1',
+      '1',
+    ]);
+  });
+});
+
+describe('toggleStepAux', () => {
+  it('turns a step aux on, then off (dropping the flag)', () => {
+    const auxed = toggleStepAux(makeTrack(), 0);
+    expect(auxed.path[0]).toEqual({ gates: [gateRight], aux: true });
+    expect(toggleStepAux(auxed, 0).path[0]).toEqual({ gates: [gateRight] });
+  });
+
+  it('does not mutate the original', () => {
+    const track = makeTrack();
+    toggleStepAux(track, 0);
+    expect(track.path[0]).toEqual({ gates: [gateRight] });
   });
 });
 
