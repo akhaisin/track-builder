@@ -1,15 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
+import * as THREE from 'three';
 import {
   addGateMesh,
   buildGrid,
-  buildLabelSprites,
+  buildLabelSprite,
   buildPipeMesh,
   computeBounds,
   cssColor,
   disposeObject,
+  pathLabelAnchors,
   PIPE_RADIUS,
 } from './three/sceneBuilders';
 import { createFlightAnimation } from './three/droneFlight';
+import type { GateMarker } from './three/droneFlight';
+import { gateCenter } from './flightPath';
 import { createSceneContext, isWebglAvailable } from './three/sceneSetup';
 import type { SceneContext } from './three/sceneSetup';
 import type { Track } from '../../types/tracks';
@@ -43,6 +47,9 @@ export default function TrackViewer({ track, trackId }: Props) {
   // curvature). User-controlled in view mode. (VIZ_023)
   const [maxDeviation, setMaxDeviation] = useState(0.1);
   const [hasFlight, setHasFlight] = useState(false);
+  // Per-step gate groups (gates + label) toggled one-at-a-time along the
+  // flight; populated by the static effect, consumed by the flight effect. (VIZ_024)
+  const markersRef = useRef<GateMarker[]>([]);
   const initialTrackRef = useRef(track);
 
   useEffect(() => {
@@ -70,21 +77,28 @@ export default function TrackViewer({ track, trackId }: Props) {
       trackGroup.add(buildPipeMesh(segment, PIPE_RADIUS, edgeColor));
     }
 
+    // Each non-aux step's gates + number become one group, revealed one at a
+    // time along the flight (VIZ_024). Aux steps stay hidden entirely. (VIZ_022)
     const stepColor = cssColor('--tb-color-success', '#7ab87a');
-    for (const step of track.path) {
-      // Aux steps are exit guides only — hidden in view mode. (VIZ_022)
-      if (step.aux) continue;
+    const anchors = pathLabelAnchors(track);
+    const markers: GateMarker[] = [];
+    track.path.forEach((step, index) => {
+      const first = step.gates[0];
+      if (step.aux || !first) return;
+      const group = new THREE.Group();
       for (const gate of step.gates) {
-        addGateMesh(trackGroup, gate, {
+        addGateMesh(group, gate, {
           fill: stepColor,
           fillOpacity: STEP_FILL_OPACITY,
           outline: stepColor,
         });
       }
-    }
-
-    // Step numbers always on, matching path mode; aux steps are skipped. (VIZ_022)
-    for (const sprite of buildLabelSprites(track, { includeAux: false })) trackGroup.add(sprite);
+      const sprite = buildLabelSprite(anchors[index]);
+      if (sprite) group.add(sprite);
+      trackGroup.add(group);
+      markers.push({ object: group, position: gateCenter(first) });
+    });
+    markersRef.current = markers;
   }, [track, webglFailed]);
 
   // Flight animation lives in its own effect so the smoothing slider rebuilds
@@ -92,7 +106,8 @@ export default function TrackViewer({ track, trackId }: Props) {
   useEffect(() => {
     const ctx = ctxRef.current;
     if (!ctx) return;
-    const flight = createFlightAnimation(track, maxDeviation);
+    // Without a flight the freshly-built step groups stay visible (default). (VIZ_024)
+    const flight = createFlightAnimation(track, maxDeviation, markersRef.current);
     setHasFlight(Boolean(flight));
     if (!flight) return;
     ctx.scene.add(flight.object);

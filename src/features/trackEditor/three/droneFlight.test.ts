@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { createFlightAnimation, trailAlpha } from './droneFlight';
+import { gateCenter } from '../flightPath';
 import type { Track } from '../../../types/tracks';
 import ladder3Json from '../../../../public/tracks/elements/ladder3.json';
 
@@ -64,5 +65,31 @@ describe('createFlightAnimation', () => {
   it('disposes its geometries and materials without throwing', () => {
     const flight = createFlightAnimation(ladder3)!;
     expect(() => flight.dispose()).not.toThrow();
+  });
+
+  it('reveals exactly one gate marker at a time, cycling through them all', () => {
+    const track: Track = {
+      edges: [],
+      path: [
+        { gates: [[[0, 0, 0], [1, 1, 0]]] },
+        { gates: [[[2, 0, 0], [3, 1, 0]]] },
+        { gates: [[[2, 2, 0], [3, 3, 0]]] },
+      ],
+    };
+    const markers = track.path.map((step) => ({
+      object: new THREE.Object3D(),
+      position: gateCenter(step.gates[0]!),
+    }));
+    const flight = createFlightAnimation(track, 0, markers)!;
+
+    const seen = new Set<number>();
+    for (let t = 0; t < 200; t++) {
+      flight.update(t * 0.05);
+      const visible = markers.filter((m) => m.object.visible);
+      expect(visible).toHaveLength(1);
+      seen.add(markers.indexOf(visible[0]));
+    }
+    // Over a few loops every gate gets its turn as the next one ahead.
+    expect(seen.size).toBe(markers.length);
   });
 });

@@ -1,7 +1,17 @@
 import * as THREE from 'three';
 import { flightControlPoints, flightWaypoints } from '../flightPath';
 import { buildQuadcopter, cssColor, disposeObject } from './sceneBuilders';
-import type { Track } from '../../../types/tracks';
+import type { Point3, Track } from '../../../types/tracks';
+
+/**
+ * A gate to reveal only while the drone is approaching it: `object` is the
+ * group toggled visible/invisible, `position` the gate center used to locate it
+ * along the flight curve. (VIZ_024)
+ */
+export interface GateMarker {
+  object: THREE.Object3D;
+  position: Point3;
+}
 
 // Drone cruise speed along the flight curve, in lattice units per second.
 const SPEED = 2.5;
@@ -63,6 +73,7 @@ const TRAIL_FRAGMENT_SHADER = `
 export function createFlightAnimation(
   track: Track,
   maxDeviation = 0,
+  markers: GateMarker[] = [],
 ): FlightAnimation | null {
   // One waypoint per step with a gate; need at least two to form a loop.
   if (flightWaypoints(track).length < 2) return null;
@@ -77,6 +88,23 @@ export function createFlightAnimation(
   // loop (coincides with the first). A per-vertex `alpha` attribute drives the
   // fade, fed to a small shader since LineBasicMaterial has no per-vertex alpha.
   const sampled = curve.getSpacedPoints(SAMPLES); // SAMPLES + 1 points
+
+  // Arc-length position (u in [0,1)) of each gate marker, found as the nearest
+  // even-spaced sample to its center, so visibility can track the drone. (VIZ_024)
+  const markerU = markers.map((marker) => {
+    const p = new THREE.Vector3(...marker.position);
+    let best = 0;
+    let bestDist = Infinity;
+    for (let i = 0; i < SAMPLES; i++) {
+      const dist = p.distanceToSquared(sampled[i]);
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = i;
+      }
+    }
+    return best / SAMPLES;
+  });
+
   const positions = new Float32Array(sampled.length * 3);
   sampled.forEach((p, i) => p.toArray(positions, i * 3));
   const alphas = new Float32Array(sampled.length).fill(BASE_ALPHA);
@@ -118,6 +146,21 @@ export function createFlightAnimation(
       alphas[i] = trailAlpha(behind, trailFrac);
     }
     alphaAttr.needsUpdate = true;
+
+    // Reveal only the gate the drone is flying toward — the nearest marker
+    // ahead in arc length. It hides the instant the drone crosses it. (VIZ_024)
+    if (markers.length > 0) {
+      let nextIndex = 0;
+      let nextGap = Infinity;
+      for (let i = 0; i < markerU.length; i++) {
+        const gap = (markerU[i] - u + 1) % 1; // distance ahead, wrapped
+        if (gap < nextGap) {
+          nextGap = gap;
+          nextIndex = i;
+        }
+      }
+      for (let i = 0; i < markers.length; i++) markers[i].object.visible = i === nextIndex;
+    }
   }
 
   update(0);

@@ -297,6 +297,26 @@ export function buildGrid(bounds: SceneBounds): THREE.GridHelper {
   return grid;
 }
 
+/** One numbered sprite for a step anchor, or null when 2D canvas is unavailable. */
+export function buildLabelSprite(anchor: PathLabelAnchor): THREE.Sprite | null {
+  const canvas = document.createElement('canvas');
+  canvas.width = 128;
+  canvas.height = 128;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+  ctx.font = 'bold 80px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = cssColor('--tb-color-accent-bg', '#f3e4c8');
+  ctx.fillText(anchor.text, 64, 64);
+  const texture = new THREE.CanvasTexture(canvas);
+  const material = new THREE.SpriteMaterial({ map: texture, depthTest: false });
+  const sprite = new THREE.Sprite(material);
+  sprite.position.set(...anchor.position);
+  sprite.scale.set(0.3, 0.3, 1);
+  return sprite;
+}
+
 /**
  * Numbered sprite labels for path steps; empty when 2D canvas is unavailable.
  * Auxiliary steps are omitted when `includeAux` is false (view mode). (VIZ_022)
@@ -309,22 +329,8 @@ export function buildLabelSprites(
   const sprites: THREE.Sprite[] = [];
   for (const anchor of pathLabelAnchors(track)) {
     if (!includeAux && anchor.aux) continue;
-    const canvas = document.createElement('canvas');
-    canvas.width = 128;
-    canvas.height = 128;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return [];
-    ctx.font = 'bold 80px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = cssColor('--tb-color-accent-bg', '#f3e4c8');
-    ctx.fillText(anchor.text, 64, 64);
-    const texture = new THREE.CanvasTexture(canvas);
-    const material = new THREE.SpriteMaterial({ map: texture, depthTest: false });
-    const sprite = new THREE.Sprite(material);
-    sprite.position.set(...anchor.position);
-    sprite.scale.set(0.3, 0.3, 1);
-    sprites.push(sprite);
+    const sprite = buildLabelSprite(anchor);
+    if (sprite) sprites.push(sprite);
   }
   return sprites;
 }
