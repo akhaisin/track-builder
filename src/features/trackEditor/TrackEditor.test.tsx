@@ -4,7 +4,7 @@ import { MemoryRouter, useLocation } from 'react-router-dom';
 import TrackEditor from './TrackEditor';
 import { tracksStore } from '../../store/tracks.store';
 import { metadataStore } from '../../store/metadata.store';
-import type { Track } from '../../types/tracks';
+import type { PathStep, Track } from '../../types/tracks';
 
 function SearchProbe() {
   const location = useLocation();
@@ -158,8 +158,8 @@ describe('workspace modes', () => {
       name: 'track-001',
       edges: [[[0, 0, 0], [0, 1, 0]]],
       path: [
-        [[[0, 0, 0], [1, 1, 0]]],
-        [[[1, 0, 0], [0, 1, 0]]],
+        { gates: [[[0, 0, 0], [1, 1, 0]]] },
+        { gates: [[[1, 0, 0], [0, 1, 0]]] },
       ],
     });
     renderEditor('track-001', '/?mode=path');
@@ -175,12 +175,12 @@ describe('workspace modes', () => {
   it('reorders and removes path steps from the steps panel, persisting to the store', async () => {
     const user = userEvent.setup();
     seedLocalTrack();
-    const stepA = [[[0, 0, 0], [1, 1, 0]]];
-    const stepB = [[[1, 0, 0], [0, 1, 0]]];
+    const stepA: PathStep = { gates: [[[0, 0, 0], [1, 1, 0]]] };
+    const stepB: PathStep = { gates: [[[1, 0, 0], [0, 1, 0]]] };
     tracksStore.getState().setTrack('track-001', {
       name: 'track-001',
       edges: [],
-      path: [stepA, stepB] as Track['path'],
+      path: [stepA, stepB],
     });
     renderEditor('track-001', '/?mode=path');
 

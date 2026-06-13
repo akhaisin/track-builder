@@ -30,7 +30,7 @@ metadata:
 - CAT_016: A track is defined by `edges` (structural segments) and `path` (racing route through gates).
 - CAT_017: Each point is a `Point3 = [x, y, z]` triple of integers on the 3D lattice grid.
 - CAT_018: An edge is a `[Point3, Point3]` pair representing a structural line segment.
-- CAT_019: A path is a sequence of gate transitions (`TrackSegment[][]`).
+- CAT_019: A path is a sequence of gate-transition steps (`PathStep[]`), each step being `{ gates: TrackSegment[]; entry?: Direction }` (see VIZ_021).
 - CAT_020: Tracks may include optional metadata: `name`, `description`.
 - CAT_021: Tracks may include an optional `caption` overlay: `{ enabled, text_1, text_2, location, orientation_angle? }`.
 - CAT_022: Tracks may include a `show_path_labels` boolean to toggle path segment label display in the 3D view.
@@ -100,7 +100,7 @@ metadata:
 
 ### Flight Animation
 
-- VIZ_019: In view mode (Track Viewer), animate a quadcopter flying the racing path. The flight curve threads the *first* gate of each path step (one gate per step), in step order, as a closed Catmull-Rom curve looped continuously. To soften the otherwise-tight turns, the gate-center waypoints are corner-rounded by a tunable fillet radius (clamped per-edge to half its length), so the drone clips just inside each gate rather than passing dead-center. Requires at least two steps with a gate; otherwise no drone is shown. The quad is a small stylized model oriented along its direction of travel.
+- VIZ_019: In view mode (Track Viewer), animate a quadcopter flying the racing path. The flight curve threads the *first* gate of each path step (one gate per step), in step order, as a closed Catmull-Rom curve looped continuously. A step with an `entry` direction (VIZ_021) contributes a *pierce pair* of control points straddling the gate center along the entry direction, forcing the curve to cross that gate perpendicular and on the intended side instead of cutting the shortest diagonal; an undirected step contributes just the gate center. The gate-center waypoints may additionally be corner-rounded by a tunable fillet radius (clamped per-edge to half its length) to soften turns. Requires at least two steps with a gate; otherwise no drone is shown. The quad is a small stylized model oriented along its direction of travel.
 - VIZ_020: Render the flight path as a thin line at a low resting opacity, overlaid with a trail that brightens behind the moving drone — maximum opacity at the drone, fading back to the resting opacity over the distance the drone covers in the trailing 4 seconds.
 
 ### Workspace Modes
@@ -124,6 +124,7 @@ metadata:
 - VIZ_015: Allow reordering path steps via the steps panel.
 - VIZ_016: Step creation: hovering a placed edge highlights it; clicking selects it (selecting another deselects). The four gates sharing the selected edge appear as candidates; hovering a candidate highlights it. Left-click adds the gate and finishes the step; right-click adds it and offers the in-plane neighbors of the last gate as further candidates (excluding gates already in the draft, gates whose shared side with the last gate is a placed edge — a pipe divides the opening — and unanchored gates — a candidate must touch the structure with at least one corner on a node of a placed edge, which keeps every gate at most one tile from the track while allowing steps to wrap around the structure in shoulder shapes). Stepping straight back across the initiating edge is blocked because that edge is placed, but a step that wraps around the structure may still reach the gate on its far side from another direction. Gates lying flat on the floor (y = 0 plane) or with any corner below it are never offered. Click-away finishes an open draft; Escape discards it. Steps are removed via the panel ✕ or the Delete key.
 - VIZ_017: Persist all path edits back to the track store immediately.
+- VIZ_021: A path step is an object `{ gates: TrackSegment[]; entry?: Direction }` (the legacy bare `TrackSegment[]` step shape is no longer supported — catalog JSON and the data model use the object form). `entry` is a signed lattice axis (`up`/`down`/`left`/`right`/`forward`/`backward`, y-up; `z+` is `backward`) constrained to the step's gate normal axis, recording which side is the entrance. It is chosen when the step's *first* gate is placed: while the draft is empty, hovering a candidate gate draws an arrow into it from the camera-facing side (you enter from the side you look from), updated per frame so it tracks orbiting. Left-click commits the gate and its direction; right-click settles the direction on the first gate and then stops drawing the hover arrow as further in-plane gates are added. Placed steps that carry an entry render a static direction arrow. The flight path honors the entry direction (VIZ_019).
 
 ---
 

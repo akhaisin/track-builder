@@ -1,7 +1,10 @@
 import {
   appendStep,
+  entryFromViewpoint,
+  entryVector,
   gateCorners,
   gateNeighbors,
+  gateNormalAxis,
   gatesAlongEdge,
   gatesEqual,
   moveStep,
@@ -17,7 +20,7 @@ const gateRight: Gate = [[0, 0, 0], [1, 1, 0]]; // spans x ∈ [0,1]
 const gateLeft: Gate = [[0, 0, 0], [-1, 1, 0]]; // spans x ∈ [-1,0]
 
 function makeTrack(): Track {
-  return { name: 't', edges: [], path: [[gateRight], [gateLeft]] };
+  return { name: 't', edges: [], path: [{ gates: [gateRight] }, { gates: [gateLeft] }] };
 }
 
 describe('gateCorners / gatesEqual', () => {
@@ -187,12 +190,38 @@ describe('nextGateCandidates', () => {
   });
 });
 
+describe('gate direction', () => {
+  const zGate: Gate = [[1, 0, 0], [0, 1, 0]]; // lies in z=0; normal axis is z (2)
+
+  it('finds the axis perpendicular to the gate plane', () => {
+    expect(gateNormalAxis(zGate)).toBe(2);
+    expect(gateNormalAxis([[0, 0, 0], [0, 1, 1]])).toBe(0); // x-normal
+    expect(gateNormalAxis([[0, 0, 0], [1, 0, 0]])).toBeNull(); // not a gate
+  });
+
+  it('keeps only entry directions parallel to the gate normal', () => {
+    expect(entryVector(zGate, 'backward')).toEqual([0, 0, 1]);
+    expect(entryVector(zGate, 'forward')).toEqual([0, 0, -1]);
+    expect(entryVector(zGate, 'up')).toBeNull(); // +y lies in the gate plane
+  });
+
+  it('enters away from the viewpoint along the gate normal', () => {
+    expect(entryFromViewpoint(zGate, [0.5, 0.5, -5])).toBe('backward'); // travel +z
+    expect(entryFromViewpoint(zGate, [0.5, 0.5, 5])).toBe('forward'); // travel −z
+  });
+});
+
 describe('appendStep', () => {
   it('adds the draft gates as a new step at the end', () => {
     const second: Gate = [[1, 0, 0], [2, 1, 0]];
     const next = appendStep(makeTrack(), [gateRight, second]);
     expect(next?.path).toHaveLength(3);
-    expect(next?.path[2]).toEqual([gateRight, second]);
+    expect(next?.path[2]).toEqual({ gates: [gateRight, second] });
+  });
+
+  it('records the entry direction when given', () => {
+    const next = appendStep(makeTrack(), [gateRight], 'backward');
+    expect(next?.path[2]).toEqual({ gates: [gateRight], entry: 'backward' });
   });
 
   it('rejects an empty draft', () => {
@@ -209,14 +238,14 @@ describe('appendStep', () => {
 describe('removeStep', () => {
   it('removes the step at the index', () => {
     const next = removeStep(makeTrack(), 0);
-    expect(next.path).toEqual([[gateLeft]]);
+    expect(next.path).toEqual([{ gates: [gateLeft] }]);
   });
 });
 
 describe('moveStep', () => {
   it('reorders steps', () => {
     const next = moveStep(makeTrack(), 0, 1);
-    expect(next.path).toEqual([[gateLeft], [gateRight]]);
+    expect(next.path).toEqual([{ gates: [gateLeft] }, { gates: [gateRight] }]);
   });
 
   it('returns the track unchanged for no-op or out-of-range moves', () => {
@@ -229,6 +258,6 @@ describe('moveStep', () => {
   it('does not mutate the original', () => {
     const track = makeTrack();
     moveStep(track, 0, 1);
-    expect(track.path[0]).toEqual([gateRight]);
+    expect(track.path[0]).toEqual({ gates: [gateRight] });
   });
 });

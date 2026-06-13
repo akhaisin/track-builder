@@ -27,7 +27,7 @@ describe('createFlightAnimation', () => {
   it('returns null when there are fewer than two gates to fly between', () => {
     expect(createFlightAnimation({ edges: [], path: [] })).toBeNull();
     expect(
-      createFlightAnimation({ edges: [], path: [[[[0, 0, 0], [1, 1, 0]]]] }),
+      createFlightAnimation({ edges: [], path: [{ gates: [[[0, 0, 0], [1, 1, 0]]] }] }),
     ).toBeNull();
   });
 

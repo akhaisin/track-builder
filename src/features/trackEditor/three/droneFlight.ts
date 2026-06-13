@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { flightWaypoints, roundCorners } from '../flightPath';
+import { flightControlPoints, flightWaypoints, roundCorners } from '../flightPath';
 import { buildQuadcopter, cssColor, disposeObject } from './sceneBuilders';
 import type { Track } from '../../../types/tracks';
 
@@ -63,10 +63,12 @@ const TRAIL_FRAGMENT_SHADER = `
  * there is nothing to fly. (VIZ_019, VIZ_020)
  */
 export function createFlightAnimation(track: Track): FlightAnimation | null {
-  const waypoints = flightWaypoints(track);
-  if (waypoints.length < 2) return null;
+  // One waypoint per step with a gate; need at least two to form a loop.
+  if (flightWaypoints(track).length < 2) return null;
 
-  const points = roundCorners(waypoints, CORNER_RADIUS).map((p) => new THREE.Vector3(...p));
+  const points = roundCorners(flightControlPoints(track), CORNER_RADIUS).map(
+    (p) => new THREE.Vector3(...p),
+  );
   const curve = new THREE.CatmullRomCurve3(points, true, 'catmullrom');
   const length = curve.getLength();
   const duration = length / SPEED; // seconds per loop

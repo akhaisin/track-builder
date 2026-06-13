@@ -1,4 +1,4 @@
-import { flightWaypoints, gateCenter, roundCorners } from './flightPath';
+import { flightControlPoints, flightWaypoints, gateCenter, roundCorners } from './flightPath';
 import type { Point3, Track } from '../../types/tracks';
 import ladder3Json from '../../../public/tracks/elements/ladder3.json';
 
@@ -27,12 +27,55 @@ describe('flightWaypoints', () => {
   it('skips empty steps', () => {
     const track: Track = {
       edges: [],
-      path: [[[[0, 0, 0], [1, 1, 0]]], [], [[[1, 1, 0], [2, 2, 0]]]],
+      path: [
+        { gates: [[[0, 0, 0], [1, 1, 0]]] },
+        { gates: [] },
+        { gates: [[[1, 1, 0], [2, 2, 0]]] },
+      ],
     };
     expect(flightWaypoints(track)).toEqual([
       [0.5, 0.5, 0],
       [1.5, 1.5, 0],
     ]);
+  });
+});
+
+describe('flightControlPoints', () => {
+  it('uses the bare gate center for an undirected step', () => {
+    const track: Track = { edges: [], path: [{ gates: [[[1, 0, 0], [0, 1, 0]]] }] };
+    expect(flightControlPoints(track)).toEqual([[0.5, 0.5, 0]]);
+  });
+
+  it('straddles the center with a pierce pair along the entry direction', () => {
+    // A z=0 gate centered at (0.5, 0.5, 0); entry "backward" is +z.
+    const track: Track = {
+      edges: [],
+      path: [{ gates: [[[1, 0, 0], [0, 1, 0]]], entry: 'backward' }],
+    };
+    expect(flightControlPoints(track)).toEqual([
+      [0.5, 0.5, -0.5],
+      [0.5, 0.5, 0.5],
+    ]);
+  });
+
+  it('flips the pierce order for the opposite entry direction', () => {
+    const track: Track = {
+      edges: [],
+      path: [{ gates: [[[1, 0, 0], [0, 1, 0]]], entry: 'forward' }],
+    };
+    expect(flightControlPoints(track)).toEqual([
+      [0.5, 0.5, 0.5],
+      [0.5, 0.5, -0.5],
+    ]);
+  });
+
+  it('ignores an entry not parallel to the gate normal, threading the center', () => {
+    // The same z=0 gate cannot be entered "up" (+y lies in its plane).
+    const track: Track = {
+      edges: [],
+      path: [{ gates: [[[1, 0, 0], [0, 1, 0]]], entry: 'up' }],
+    };
+    expect(flightControlPoints(track)).toEqual([[0.5, 0.5, 0]]);
   });
 });
 

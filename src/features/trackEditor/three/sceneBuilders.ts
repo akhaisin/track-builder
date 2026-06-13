@@ -23,7 +23,7 @@ export function cssColor(token: string, fallback: string): string {
 function allPoints(track: Track): Point3[] {
   const points: Point3[] = [];
   for (const [a, b] of track.edges) points.push(a, b);
-  for (const step of track.path) for (const [a, b] of step) points.push(a, b);
+  for (const step of track.path) for (const [a, b] of step.gates) points.push(a, b);
   return points;
 }
 
@@ -61,7 +61,7 @@ export function flattenSegments(segments: TrackSegment[]): number[] {
 
 /** All path segments across every gate transition step. */
 export function pathSegments(track: Track): TrackSegment[] {
-  return track.path.flat();
+  return track.path.flatMap((step) => step.gates);
 }
 
 export interface PathLabelAnchor {
@@ -86,7 +86,7 @@ function topRightCorner(corners: Point3[]): Point3 {
 export function pathLabelAnchors(track: Track): PathLabelAnchor[] {
   return track.path.map((step, index) => {
     const text = String(index + 1);
-    const gate = step[0];
+    const gate = step.gates[0];
     const corners = gate ? gateCorners(gate) : [];
     if (corners.length === 0) {
       // Empty step or a non-square segment: fall back to its midpoint / origin.
@@ -204,6 +204,23 @@ export function addGateMesh(
     ),
   );
   return fillMesh;
+}
+
+/**
+ * An arrow whose tip lands at `center` and points along `dir` (a step's entry
+ * travel direction), so it reads as flying into the gate from the near side.
+ * Used both for the hovered candidate while placing and for placed steps that
+ * carry an entry direction. (VIZ_021)
+ */
+export function buildDirectionArrow(
+  center: Point3,
+  dir: Point3,
+  color: string,
+  length = 0.8,
+): THREE.ArrowHelper {
+  const direction = new THREE.Vector3(...dir).normalize();
+  const origin = new THREE.Vector3(...center).addScaledVector(direction, -length);
+  return new THREE.ArrowHelper(direction, origin, length, color, length * 0.35, length * 0.22);
 }
 
 /**

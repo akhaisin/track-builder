@@ -27,6 +27,22 @@ describe('isTrack', () => {
     expect(isTrack({ edges: [], path: [[[0, 0, 0]]] })).toBe(false);
     expect(isTrack({ edges: [], path: [42] })).toBe(false);
   });
+
+  it('accepts step objects with gates and an optional entry direction', () => {
+    expect(isTrack({ edges: [], path: [{ gates: [[[0, 0, 0], [1, 1, 0]]] }] })).toBe(true);
+    expect(
+      isTrack({ edges: [], path: [{ gates: [[[0, 0, 0], [1, 1, 0]]], entry: 'up' }] }),
+    ).toBe(true);
+  });
+
+  it('rejects bad step shapes and unknown entry directions', () => {
+    expect(isTrack({ edges: [], path: [{ gates: 'nope' }] })).toBe(false);
+    expect(
+      isTrack({ edges: [], path: [{ gates: [[[0, 0, 0], [1, 1, 0]]], entry: 'sideways' }] }),
+    ).toBe(false);
+    // Legacy bare-array steps are no longer accepted.
+    expect(isTrack({ edges: [], path: [[[[0, 0, 0], [1, 1, 0]]]] })).toBe(false);
+  });
 });
 
 describe('trackJsonUrl', () => {

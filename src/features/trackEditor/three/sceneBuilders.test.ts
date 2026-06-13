@@ -39,7 +39,7 @@ describe('flattenSegments / pathSegments', () => {
 
   it('collects all path steps', () => {
     expect(pathSegments(ladder3)).toHaveLength(
-      ladder3.path.reduce((sum, step) => sum + step.length, 0),
+      ladder3.path.reduce((sum, step) => sum + step.gates.length, 0),
     );
   });
 });

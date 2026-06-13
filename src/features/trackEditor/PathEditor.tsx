@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import {
   addGateMesh,
+  buildDirectionArrow,
   buildGrid,
   buildLabelSprites,
   buildPipeMesh,
@@ -13,16 +14,20 @@ import {
 import { createSceneContext, isWebglAvailable } from './three/sceneSetup';
 import {
   appendStep,
+  entryFromViewpoint,
+  entryVector,
   moveStep,
   nextGateCandidates,
   removeStep,
   segmentsEqual,
 } from './pathLogic';
+import { gateCenter } from './flightPath';
 import { updateTrack } from '../../store/trackActions';
 import { useTrackMetadata } from '../../store/useMetadataStore';
+import { DIRECTION_VECTORS } from '../../types/tracks';
 import type { Gate } from './pathLogic';
 import type { SceneContext } from './three/sceneSetup';
-import type { Track, TrackSegment } from '../../types/tracks';
+import type { Direction, Point3, Track, TrackSegment } from '../../types/tracks';
 import styles from './TrackEditor.module.css';
 
 export interface Props {
@@ -36,6 +41,10 @@ const SELECTED_STEP_FILL_OPACITY = 0.5;
 const DRAFT_FILL_OPACITY = 0.5;
 const CANDIDATE_FILL_OPACITY = 0.12;
 const HOVER_MIN_FILL_OPACITY = 0.5;
+// Entry-direction arrow lengths (lattice units): the hovered candidate's arrow
+// while choosing the first gate, and the static one drawn on placed steps.
+const HOVER_ARROW_LENGTH = 0.8;
+const STEP_ARROW_LENGTH = 0.6;
 
 /** What a raycast hit means; stored on the fill/pipe meshes. */
 interface PickData {
@@ -72,6 +81,8 @@ export default function PathEditor({ trackId, track }: Props) {
   const [webglFailed] = useState(() => !isWebglAvailable());
   const [selectedEdge, setSelectedEdge] = useState<TrackSegment | null>(null);
   const [draft, setDraft] = useState<Gate[]>([]);
+  // Entry direction for the step being created, settled from its first gate. (VIZ_021)
+  const [draftEntry, setDraftEntry] = useState<Direction | null>(null);
   const [selectedStep, setSelectedStep] = useState<number | null>(null);
   const metadata = useTrackMetadata(trackId);
   const readonly = metadata?.readonly ?? false;
@@ -85,22 +96,27 @@ export default function PathEditor({ trackId, track }: Props) {
   );
 
   // Latest interaction state for native event handlers.
-  const stateRef = useRef({ selectedEdge, draft, selectedStep, track });
+  const stateRef = useRef({ selectedEdge, draft, draftEntry, selectedStep, track });
   useEffect(() => {
-    stateRef.current = { selectedEdge, draft, selectedStep, track };
+    stateRef.current = { selectedEdge, draft, draftEntry, selectedStep, track };
   });
 
-  /** Commit the draft gates as a new step (no-op for an empty draft). */
+  /**
+   * Commit the draft gates as a new step (no-op for an empty draft). The step's
+   * entry direction comes from `entryOverride`, else the one settled when the
+   * first gate was placed. (VIZ_021)
+   */
   const finalizeDraft = useCallback(
-    (extraGate?: Gate) => {
-      const { draft: gates, track: currentTrack } = stateRef.current;
+    (extraGate?: Gate, entryOverride?: Direction) => {
+      const { draft: gates, draftEntry: entry, track: currentTrack } = stateRef.current;
       const all = extraGate ? [...gates, extraGate] : gates;
-      const next = appendStep(currentTrack, all);
+      const next = appendStep(currentTrack, all, entryOverride ?? entry ?? undefined);
       if (next) {
         commit(next);
         setSelectedStep(next.path.length - 1);
       }
       setDraft([]);
+      setDraftEntry(null);
       setSelectedEdge(null);
     },
     [commit],
@@ -115,7 +131,21 @@ export default function PathEditor({ trackId, track }: Props) {
 
     const raycaster = new THREE.Raycaster();
     const downPosition = { x: 0, y: 0 };
-    const hoverColor = new THREE.Color(cssColor('--tb-color-warning', '#c87d2a'));
+    const warningColor = cssColor('--tb-color-warning', '#c87d2a');
+    const hoverColor = new THREE.Color(warningColor);
+
+    // Arrow showing the entry side of the hovered candidate, away from the
+    // camera (you enter from the side you look from). Lives in the scene, not
+    // the rebuilt track group, and is driven per frame so it tracks orbiting. (VIZ_021)
+    const hoverArrow = buildDirectionArrow([0, 0, 0], [0, 0, 1], warningColor, HOVER_ARROW_LENGTH);
+    hoverArrow.visible = false;
+    ctx.scene.add(hoverArrow);
+
+    /** Entry direction a click would assign to `gate` from the current camera. */
+    function entryForGate(gate: Gate): Direction | undefined {
+      const p = ctx.camera.position;
+      return entryFromViewpoint(gate, [p.x, p.y, p.z] as Point3) ?? undefined;
+    }
 
     function pick(pointerEvent: PointerEvent): THREE.Object3D | null {
       raycaster.setFromCamera(ndcFromPointer(pointerEvent, element), ctx.camera);
@@ -144,17 +174,21 @@ export default function PathEditor({ trackId, track }: Props) {
 
     function handleClick(pointerEvent: PointerEvent) {
       const data = pick(pointerEvent)?.userData as PickData | undefined;
+      const { draft } = stateRef.current;
 
       if (pointerEvent.button === 2) {
         // Right-click: add the gate, keep the draft open for more. (VIZ_016)
         if (data?.kind === 'candidate' && data.gate) {
-          setDraft([...stateRef.current.draft, data.gate]);
+          // The first gate settles the step's entry direction. (VIZ_021)
+          if (draft.length === 0) setDraftEntry(entryForGate(data.gate) ?? null);
+          setDraft([...draft, data.gate]);
         }
         return;
       }
 
       if (data?.kind === 'candidate' && data.gate) {
-        finalizeDraft(data.gate);
+        // A single-gate step settles its direction now; a grown draft already has one.
+        finalizeDraft(data.gate, draft.length === 0 ? entryForGate(data.gate) : undefined);
         return;
       }
       // Click-away: an open draft is finished as-is before anything else.
@@ -195,12 +229,36 @@ export default function PathEditor({ trackId, track }: Props) {
       menuEvent.preventDefault();
     }
 
+    // Per frame: point the entry arrow at the hovered candidate, but only while
+    // choosing the first gate — once the draft grows the direction is settled. (VIZ_021)
+    const unsubscribeFrame = ctx.onFrame(() => {
+      const data = hoveredRef.current?.userData as PickData | undefined;
+      const entry =
+        data?.kind === 'candidate' && data.gate && stateRef.current.draft.length === 0
+          ? entryForGate(data.gate)
+          : undefined;
+      const vector = entry ? DIRECTION_VECTORS[entry] : null;
+      if (vector && data?.gate) {
+        const center = gateCenter(data.gate);
+        hoverArrow.position.set(
+          center[0] - vector[0] * HOVER_ARROW_LENGTH,
+          center[1] - vector[1] * HOVER_ARROW_LENGTH,
+          center[2] - vector[2] * HOVER_ARROW_LENGTH,
+        );
+        hoverArrow.setDirection(new THREE.Vector3(...vector).normalize());
+        hoverArrow.visible = true;
+      } else {
+        hoverArrow.visible = false;
+      }
+    });
+
     element.addEventListener('pointermove', onPointerMove);
     element.addEventListener('pointerdown', onPointerDown);
     element.addEventListener('pointerup', onPointerUp);
     element.addEventListener('contextmenu', onContextMenu);
 
     return () => {
+      unsubscribeFrame();
       element.removeEventListener('pointermove', onPointerMove);
       element.removeEventListener('pointerdown', onPointerDown);
       element.removeEventListener('pointerup', onPointerUp);
@@ -216,6 +274,7 @@ export default function PathEditor({ trackId, track }: Props) {
     function onKeyDown(keyEvent: KeyboardEvent) {
       if (keyEvent.key === 'Escape') {
         setDraft([]);
+        setDraftEntry(null);
         setSelectedEdge(null);
       }
       if ((keyEvent.key === 'Delete' || keyEvent.key === 'Backspace') && selectedStep !== null) {
@@ -273,7 +332,7 @@ export default function PathEditor({ trackId, track }: Props) {
     // Existing steps. (VIZ_014)
     track.path.forEach((step, index) => {
       const isSelected = index === selectedStep;
-      for (const gate of step) {
+      for (const gate of step.gates) {
         addGate(
           gate,
           stepColor,
@@ -288,6 +347,17 @@ export default function PathEditor({ trackId, track }: Props) {
         );
       }
     });
+
+    // Entry-direction arrow on each placed step that carries one. (VIZ_021)
+    for (const step of track.path) {
+      if (!step.entry) continue;
+      const gate = step.gates[0];
+      if (!gate) continue;
+      const vector = entryVector(gate, step.entry);
+      if (vector) {
+        trackGroup.add(buildDirectionArrow(gateCenter(gate), vector, stepColor, STEP_ARROW_LENGTH));
+      }
+    }
 
     // Draft gates of the step being created (not pickable).
     for (const gate of draft) {
@@ -369,7 +439,7 @@ export default function PathEditor({ trackId, track }: Props) {
               >
                 <span className={styles.stepLabel}>Step {index + 1}</span>
                 <span className={styles.stepMeta}>
-                  {step.length} gate{step.length === 1 ? '' : 's'}
+                  {step.gates.length} gate{step.gates.length === 1 ? '' : 's'}
                 </span>
                 <button
                   className={styles.iconBtnDark}

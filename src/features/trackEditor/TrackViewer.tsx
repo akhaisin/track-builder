@@ -67,7 +67,7 @@ export default function TrackViewer({ track, trackId }: Props) {
 
     const stepColor = cssColor('--tb-color-success', '#7ab87a');
     for (const step of track.path) {
-      for (const gate of step) {
+      for (const gate of step.gates) {
         addGateMesh(trackGroup, gate, {
           fill: stepColor,
           fillOpacity: STEP_FILL_OPACITY,

@@ -1,3 +1,4 @@
+import { entryVector } from './pathLogic';
 import type { Point3, Track, TrackSegment } from '../../types/tracks';
 
 /** Center of a gate square: the midpoint of its diagonal. (VIZ_019) */
@@ -16,9 +17,39 @@ export function gateCenter(gate: TrackSegment): Point3 {
  */
 export function flightWaypoints(track: Track): Point3[] {
   return track.path
-    .map((step) => step[0])
+    .map((step) => step.gates[0])
     .filter((gate): gate is TrackSegment => Boolean(gate))
     .map(gateCenter);
+}
+
+// How far before/after a gate center the directed pierce points sit, in lattice
+// units. Threading both forces the curve perpendicular through the gate, in the
+// step's entry direction, instead of cutting the shortest diagonal. (VIZ_021)
+const PIERCE = 0.2;
+
+/**
+ * Control points for the flight curve. A step whose `entry` is parallel to its
+ * gate's normal contributes a pierce pair straddling the gate center along the
+ * entry direction; an undirected step contributes just the center, so the curve
+ * threads it without a forced crossing side. (VIZ_019, VIZ_021)
+ */
+export function flightControlPoints(track: Track): Point3[] {
+  const points: Point3[] = [];
+  for (const step of track.path) {
+    const gate = step.gates[0];
+    if (!gate) continue;
+    const c = gateCenter(gate);
+    const dir = step.entry ? entryVector(gate, step.entry) : null;
+    if (dir) {
+      points.push(
+        [c[0] - dir[0] * PIERCE, c[1] - dir[1] * PIERCE, c[2] - dir[2] * PIERCE],
+        [c[0] + dir[0] * PIERCE, c[1] + dir[1] * PIERCE, c[2] + dir[2] * PIERCE],
+      );
+    } else {
+      points.push(c);
+    }
+  }
+  return points;
 }
 
 function sub(a: Point3, b: Point3): Point3 {

@@ -1,5 +1,6 @@
 import { pointsEqual } from './gatesLogic';
-import type { Point3, Track, TrackSegment } from '../../types/tracks';
+import { DIRECTION_VECTORS, directionFromVector } from '../../types/tracks';
+import type { Direction, PathStep, Point3, Track, TrackSegment } from '../../types/tracks';
 
 /**
  * A gate is a 1×1 axis-aligned lattice square, stored as a diagonal segment:
@@ -21,6 +22,39 @@ function gateAxes(gate: Gate): [number, number] | null {
   if (axes.length !== 2) return null;
   if (axes.some((axis) => Math.abs(gate[0][axis] - gate[1][axis]) !== 1)) return null;
   return [axes[0], axes[1]];
+}
+
+/** The axis perpendicular to the gate's plane (its normal), or null for a non-gate. */
+export function gateNormalAxis(gate: Gate): number | null {
+  const axes = gateAxes(gate);
+  if (!axes) return null;
+  return [0, 1, 2].find((axis) => axis !== axes[0] && axis !== axes[1]) ?? null;
+}
+
+/**
+ * The signed-axis unit vector for `entry`, but only when it is parallel to the
+ * gate's normal axis — the only directions you can meaningfully fly through the
+ * gate. Returns null otherwise. (VIZ_021)
+ */
+export function entryVector(gate: Gate, entry: Direction): Point3 | null {
+  const axis = gateNormalAxis(gate);
+  if (axis === null) return null;
+  const v = DIRECTION_VECTORS[entry];
+  return v[axis] !== 0 ? v : null;
+}
+
+/**
+ * The travel direction through `gate` for a camera at `viewpoint`: away from
+ * the viewer along the gate's normal, so the drone enters from the side you are
+ * looking from. (VIZ_021)
+ */
+export function entryFromViewpoint(gate: Gate, viewpoint: Point3): Direction | null {
+  const axis = gateNormalAxis(gate);
+  if (axis === null) return null;
+  const planeCoord = gate[0][axis];
+  const v: Point3 = [0, 0, 0];
+  v[axis] = planeCoord - viewpoint[axis] >= 0 ? 1 : -1;
+  return directionFromVector(v);
 }
 
 /** The gate's 4 corners in ring order, or [] if the segment is not a gate. */
@@ -161,10 +195,14 @@ export function nextGateCandidates(
   return candidates;
 }
 
-/** Append a finished step of one or more gates. (VIZ_014, VIZ_016) */
-export function appendStep(track: Track, gates: Gate[]): Track | null {
+/**
+ * Append a finished step of one or more gates, with an optional entry
+ * direction set from the step's first gate. (VIZ_014, VIZ_016, VIZ_021)
+ */
+export function appendStep(track: Track, gates: Gate[], entry?: Direction): Track | null {
   if (gates.length === 0) return null;
-  return { ...track, path: [...track.path, gates] };
+  const step: PathStep = entry ? { gates, entry } : { gates };
+  return { ...track, path: [...track.path, step] };
 }
 
 /** Remove a whole path step. (VIZ_016) */
